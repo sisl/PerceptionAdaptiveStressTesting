@@ -30,3 +30,11 @@ Now everything should be ready to run. Run the following
 python ObjectDetect.py --data_path PATH/TO/KITTI/DATA/velodyne_points/data/
 
 This will create input images in a directory InputImages/
+
+# Trajectory prediction
+After the input images are created they are in the format needed for trajectory prediction on covernet: 
+https://github.com/nutonomy/nuscenes-devkit/blob/master/python-sdk/tutorials/prediction_tutorial.ipynb
+The link above is to a tutorial on how to predict trajectories. Covernet expects a map layered onto the input images of cars, however we do not have
+that data so we have elected to create an empy map representation which will eliminate the map on nuscenes data.
+
+For the agent state vector that information can be pulled from the oxts/ files in the ego vehicle.
