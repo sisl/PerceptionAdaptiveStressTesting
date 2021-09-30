@@ -1,16 +1,21 @@
 # SequentialPerceptionPipeline
-Download pytorch using commands:
-Conda install python-3.6 pytorch=1.1 cudatoolkit=10.0 cudnn boost mayavi importlib_metadata importlib_resources
+
+## Setup
+This project requires python 3.6 and pytorch 1.3. In a new `conda` environment, you can install these with:
+
+```conda install python=3.6 pytorch=1.3 cudatoolkit=10.0 cudnn boost mayavi importlib_metadata importlib_resources```
 
 And ensure:
->>torch._C._GLIBCXX_USE_CXX11_ABI
+>torch._C._GLIBCXX_USE_CXX11_ABI
+
 is True
 
-Follow the instructions here: https://github.com/nutonomy/nuscenes-devkit to download the nuscenes devkit package
+Next install the NuScenes python devkit. Follow the instructions here: https://github.com/nutonomy/nuscenes-devkit.
 
-You should not need nuImages or the nuScenes data to continue with this project but you can download the nuscenes mini dataset 
-along with the map expansion v1.3 to learn more about it. Or if you want to ever run the tutorial on the nuscenes-devkit for prediction,
-you'll need the mini and map expansion data.
+The nuscenes devkit also includes instructions on downloading the NuScenes dataset. To run this project, you will need the following data:
+* [NuScenes v1.0-mini](https://github.com/nutonomy/nuscenes-devkit#nuscenes-setup)
+* [Map expansion](https://github.com/nutonomy/nuscenes-devkit#map-expansion)
+
 
 Now follow the installation instructions for https://github.com/traveller59/spconv
 NOTE:
@@ -26,15 +31,15 @@ and download the PV-RCNN_8369.pth pre-trained model located: https://drive.googl
 
 Make a directory within OpenPCDet and save the model to "OpenPCDet/Models/pv_rcnn8369.pth"
 
-Now everything should be ready to run. Run the following
-python ObjectDetect.py --data_path PATH/TO/KITTI/DATA/velodyne_points/data/
+<!-- Now everything should be ready to run. Run the following
+python ObjectDetect.py --data_path PATH/TO/KITTI/DATA/velodyne_points/data/ -->
 
-This will create input images in a directory InputImages/
+<!-- This will create input images in a directory InputImages/ -->
 
-# Trajectory prediction
+<!-- # Trajectory prediction
 After the input images are created they are in the format needed for trajectory prediction on covernet: 
 https://github.com/nutonomy/nuscenes-devkit/blob/master/python-sdk/tutorials/prediction_tutorial.ipynb
 The link above is to a tutorial on how to predict trajectories. Covernet expects a map layered onto the input images of cars, however we do not have
 that data so we have elected to create an empy map representation which will eliminate the map on nuscenes data.
 
-For the agent state vector that information can be pulled from the oxts/ files in the ego vehicle.
+For the agent state vector that information can be pulled from the oxts/ files in the ego vehicle. -->
