@@ -130,17 +130,6 @@ def main():
 
             # Update Tracker
             for tracking_name in TRACKING_NAMES:
-
-                # det_positions = [np.array(b.translation) for b in dets[tracking_name]]
-                # from sklearn.metrics import pairwise_distances
-                # dist_matrix = pairwise_distances(det_positions)
-                # import matplotlib.pyplot as plt
-
-                # dd = np.array(det_positions)
-                # plt.figure()
-                # plt.scatter(dd[:, 0], dd[:, 1])
-                # plt.savefig('./pedestrians.png')
-
                 updated_tracks = trackers[tracking_name].update(dets[tracking_name])
                 tracking_results[current_sample_token] += updated_tracks
 

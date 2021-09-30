@@ -3,6 +3,7 @@ from nuscenes.eval.common.config import config_factory
 from nuscenes.eval.tracking.data_classes import TrackingConfig
 from nuscenes.eval.tracking.evaluate import TrackingEval
 from pyquaternion import Quaternion
+from sequential_perception.tracking_render import CustomTrackingRenderer
 
 def main():
     # TODO add argparse
@@ -28,7 +29,7 @@ def main():
                                       eval_set=eval_set, nusc_version=nusc_version,
                                       output_dir=eval_tracking_path, nusc_dataroot=nusc_dataroot,
                                       render_classes=render_classes, verbose=True)
-    nusc_tracking_eval.main(render_curves=1)
+    nusc_tracking_eval.main(render_curves=0)
 
 if __name__ == '__main__':
     main()
