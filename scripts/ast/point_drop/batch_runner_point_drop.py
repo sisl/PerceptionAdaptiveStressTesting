@@ -33,7 +33,8 @@ if __name__ == '__main__':
                 }
 
     # simulation settings
-    pipeline_config_path = '/home/hdelecki/ford_ws/SequentialPerceptionPipeline/configs/pipeline_config.yaml'
+    # pipeline_config_path = '/home/hdelecki/ford_ws/SequentialPerceptionPipeline/configs/pipeline_config.yaml'
+    pipeline_config_path = '/mnt/hdd/hdelecki/ford_ws/src/SequentialPerceptionPipeline/configs/pipeline_config.yaml'
     with open(pipeline_config_path, 'r') as f:
         pipeline_config = yaml.load(f, yaml.SafeLoader)
 
@@ -43,10 +44,10 @@ if __name__ == '__main__':
                 'max_path_length': max_path_length,
                 }
 
-    # scene_token = 'fcbccedd61424f1b85dcbf8f897f9754'
-    # target_instance = '045cd82a77a1472499e8c15100cb5ff3'
-    scene_token ='c5224b9b454b4ded9b5d2d2634bbda8a'
-    target_instance = '88e4abb15ade4097a1689225c13399ec'
+    scene_token = 'fcbccedd61424f1b85dcbf8f897f9754'
+    target_instance = '045cd82a77a1472499e8c15100cb5ff3'
+    # scene_token ='c5224b9b454b4ded9b5d2d2634bbda8a'
+    # target_instance = '88e4abb15ade4097a1689225c13399ec'
     metric = 'MinFDEK'
     k = 1
     threshold = 20

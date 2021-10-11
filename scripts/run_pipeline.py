@@ -1,11 +1,11 @@
 import argparse
 import time
-from nuscenes.eval.common.config import config_factory
-from nuscenes.eval.common.data_classes import EvalBoxes
-from nuscenes.eval.detection.data_classes import DetectionBox
-from nuscenes.eval.prediction.data_classes import Prediction
-from nuscenes.eval.tracking.data_classes import TrackingBox
-from nuscenes.eval.tracking.evaluate import TrackingEval
+# from nuscenes.eval.common.config import config_factory
+# from nuscenes.eval.common.data_classes import EvalBoxes
+# from nuscenes.eval.detection.data_classes import DetectionBox
+# from nuscenes.eval.prediction.data_classes import Prediction
+# from nuscenes.eval.tracking.data_classes import TrackingBox
+# from nuscenes.eval.tracking.evaluate import TrackingEval
 import yaml
 import json
 from nuscenes import NuScenes
@@ -50,6 +50,8 @@ def main(pipeline_config):
     detections = pipeline.run_detection(all_data_dicts)
     print('Done. Detection took {} sec'.format(time.time() - start))
 
+    detection_results_path = Path(pipeline_config['DETECTION']['RESULTS'])
+    detection_results_path.parent.mkdir(parents=True, exist_ok=True)
     with open(pipeline_config['DETECTION']['RESULTS'], 'w') as f:
         json.dump(detections, f)
 
@@ -62,13 +64,15 @@ def main(pipeline_config):
 
 
     # Tracking evaluation
+    tracking_results_path = Path(pipeline_config['TRACKING']['RESULTS'])
+    tracking_results_path.parent.mkdir(parents=True, exist_ok=True)
     with open(pipeline_config['TRACKING']['RESULTS'], 'w') as f:
         json.dump(tracks, f)
         
-    tracking_eval_cfg = config_factory('tracking_nips_2019')
-    eval_set = 'mini_val'
+    # tracking_eval_cfg = config_factory('tracking_nips_2019')
+    # eval_set = 'mini_val'
 
-    output_dir='/scratch/hdelecki/ford/output/tracking/kalman/nusc_tracking_evaluation/kalman_tracker_mini'
+    # output_dir='/scratch/hdelecki/ford/output/tracking/kalman/nusc_tracking_evaluation/kalman_tracker_mini'
     # nusc_tracking_eval = TrackingEval(config=tracking_eval_cfg, result_path=pipeline_config['TRACKING']['RESULTS'], 
     #                                   eval_set=eval_set, nusc_version=pipeline_config['NUSCENES_VERSION'],
     #                                   output_dir=output_dir, nusc_dataroot=pipeline_config['NUSCENES_DATAROOT'],
@@ -84,7 +88,8 @@ def main(pipeline_config):
     print('Done. Prediction took {} sec'.format(time.time() - start))
     print('Done')
 
-
+    prediction_results_path = Path(pipeline_config['PREDICTION']['RESULTS'])
+    prediction_results_path.parent.mkdir(parents=True, exist_ok=True)
     with open(pipeline_config['PREDICTION']['RESULTS'], 'w') as f:
         json.dump(preds, f)
 

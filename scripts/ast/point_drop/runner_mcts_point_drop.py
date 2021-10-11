@@ -18,6 +18,7 @@ from ast_toolbox.algos import MCTSRS
 from ast_toolbox.envs import ASTEnv
 #from ast_toolbox.rewards import ExampleAVReward
 from ast_toolbox.samplers import ASTVectorizedSampler
+from ast_toolbox.samplers import BatchSampler
 #from ast_toolbox.simulators import ExampleAVSimulator
 #from ast_toolbox.spaces import ExampleAVSpaces
 
@@ -159,9 +160,13 @@ def runner(
                     else:
                         raise NotImplementedError
 
-                    sampler_cls = ASTVectorizedSampler
+                    #sampler_cls = ASTVectorizedSampler
+                    sampler_cls = BatchSampler
                     sampler_args['sim'] = sim
                     sampler_args['reward_function'] = reward_function
+                    sampler_args['open_loop'] = sim_args['open_loop']
+                    sampler_args['open_loop'] = sim_args['open_loop']
+                    sampler_args['open_loop'] = run_experiment_args ['n_parallel']
 
                     local_runner.setup(algo=algo,
                                        env=env,

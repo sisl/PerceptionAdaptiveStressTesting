@@ -1,18 +1,40 @@
-PROJECT_ROOT: ~/hdelecki/ford_ws/SequentialPerceptionPipeline/
-NUSCENES_DATAROOT: /scratch/hdelecki/ford/data/sets/nuscenes/v1.0-mini
+# ---------------------------------- For boston ----------------------------------------------
+PROJECT_ROOT: /mnt/hdd/hdelecki/ford_ws/src/SequentialPerceptionPipeline
+NUSCENES_DATAROOT: /mnt/hdd/data/sets/nuscenes/v1.0-mini
 NUSCENES_VERSION: v1.0-mini # v1.0-mini or v1.0-trainval
-NUSCENES_SPLIT: mini_train # train or val
+NUSCENES_SPLIT: mini_val # train or val
 
 DETECTION:
-  MODEL_CONFIG: /home/hdelecki/ford_ws/SequentialPerceptionPipeline/configs/detection/cbgs_pp_multihead.yaml
-  MODEL_CKPT: /home/hdelecki/ford_ws/OpenPCDet/models/pp_multihead_nds5823_updated.pth
+  MODEL_CONFIG: /mnt/hdd/hdelecki/ford_ws/src/SequentialPerceptionPipeline/configs/detection/cbgs_pp_multihead.yaml
+  MODEL_CKPT: /mnt/hdd/hdelecki/ford_ws/models/pcdet/pp_multihead_nds5823_updated.pth
   PNTCLOUD_EXT: .pkl
-  RESULTS: /scratch/hdelecki/ford/output/detection/results/detection_results.json
+  RESULTS: /mnt/hdd/ford_ws/output/detection/results/detection_results.json
 
 TRACKING:
-  RESULTS: /scratch/hdelecki/ford/output/tracking/kalman/nusc_tracking_results.json
+  RESULTS: /mnt/hdd/ford_ws/output/tracking/kalman/nusc_tracking_results.json
 
 PREDICTION:
-  EPS_SETS: /scratch/hdelecki/ford/models/nuscenes-prediction-challenge-trajectory-sets/epsilon_8.pkl
-  MODEL_CKPT: /scratch/hdelecki/ford/models/covernet_ckpts/epoch=24-step=50299-state-dict-torch13.pt
-  RESULTS: /scratch/hdelecki/ford/output/prediction/results/prediction_results.json
+  EPS_SETS: /mnt/hdd/hdelecki/ford_ws/models/nuscenes-prediction-challenge-trajectory-sets/epsilon_8.pkl
+  MODEL_CKPT: /mnt/hdd/hdelecki/ford_ws/models/covernet_ckpts/epoch=24-step=50299-state-dict-torch13.pt
+  RESULTS: /mnt/hdd/ford_ws/output/prediction/results/prediction_results.json
+
+
+# ---------------------------------- For astoria ----------------------------------------------
+# PROJECT_ROOT: ~/hdelecki/ford_ws/SequentialPerceptionPipeline/
+# NUSCENES_DATAROOT: /scratch/hdelecki/ford/data/sets/nuscenes/v1.0-mini
+# NUSCENES_VERSION: v1.0-mini # v1.0-mini or v1.0-trainval
+# NUSCENES_SPLIT: mini_train # train or val
+
+# DETECTION:
+#   MODEL_CONFIG: /home/hdelecki/ford_ws/SequentialPerceptionPipeline/configs/detection/cbgs_pp_multihead.yaml
+#   MODEL_CKPT: /home/hdelecki/ford_ws/OpenPCDet/models/pp_multihead_nds5823_updated.pth
+#   PNTCLOUD_EXT: .pkl
+#   RESULTS: /scratch/hdelecki/ford/output/detection/results/detection_results.json
+
+# TRACKING:
+#   RESULTS: /scratch/hdelecki/ford/output/tracking/kalman/nusc_tracking_results.json
+
+# PREDICTION:
+#   EPS_SETS: /scratch/hdelecki/ford/models/nuscenes-prediction-challenge-trajectory-sets/epsilon_8.pkl
+#   MODEL_CKPT: /scratch/hdelecki/ford/models/covernet_ckpts/epoch=24-step=50299-state-dict-torch13.pt
+#   RESULTS: /scratch/hdelecki/ford/output/prediction/results/prediction_results.json

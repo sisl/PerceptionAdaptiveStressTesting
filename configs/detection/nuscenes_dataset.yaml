@@ -1,5 +1,5 @@
 DATASET: 'NuScenesDataset'
-DATA_PATH: '/scratch/hdelecki/ford/data/sets/nuscenes/'
+DATA_PATH: '/mnt/hdd/data/sets/nuscenes/'
 
 VERSION: 'v1.0-mini'
 MAX_SWEEPS: 10
