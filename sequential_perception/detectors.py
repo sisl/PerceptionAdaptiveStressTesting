@@ -18,12 +18,6 @@ def load_pcdet_config(detection_config):
     return pcdet_config
 
 
-# class OpenPCDetector:
-#     def __init__(self, 
-#                  detection_config: Dict,
-#                  data_path: str,
-#                  ckpt_path: str,
-#                  ext: str = '.pkl'):
 class OpenPCDetector:
     def __init__(self, 
                  model_config_path: str,

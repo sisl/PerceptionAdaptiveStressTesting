@@ -124,7 +124,7 @@ def runner(
             with tf.variable_scope('AST', reuse=tf.AUTO_REUSE):
 
                 with LocalTFRunner(
-                        snapshot_config=snapshot_config, max_cpus=4, sess=sess) as local_runner:
+                        snapshot_config=snapshot_config, max_cpus=1, sess=sess) as local_runner:
 
                     # Instantiate AST classes
                     sim = build_simulator(perception_args, sim_args)
@@ -160,13 +160,13 @@ def runner(
                     else:
                         raise NotImplementedError
 
-                    #sampler_cls = ASTVectorizedSampler
-                    sampler_cls = BatchSampler
+                    sampler_cls = ASTVectorizedSampler
+                    # sampler_cls = BatchSampler
                     sampler_args['sim'] = sim
                     sampler_args['reward_function'] = reward_function
                     sampler_args['open_loop'] = sim_args['open_loop']
                     sampler_args['open_loop'] = sim_args['open_loop']
-                    sampler_args['open_loop'] = run_experiment_args ['n_parallel']
+                    sampler_args['n_envs'] = run_experiment_args['n_parallel']
 
                     local_runner.setup(algo=algo,
                                        env=env,

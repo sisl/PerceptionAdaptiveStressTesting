@@ -1,11 +1,11 @@
-PROJECT_ROOT: mnt/hdd/hdelecki/ford_ws/SequentialPerceptionPipeline/
+PROJECT_ROOT: /mnt/hdd/hdelecki/ford_ws/src/SequentialPerceptionPipeline/
 NUSCENES_DATAROOT: /mnt/hdd/data/sets/nuscenes/v1.0-mini
 NUSCENES_VERSION: v1.0-mini # v1.0-mini or v1.0-trainval
 NUSCENES_SPLIT: mini_val # train or val
 
 # Detection
-MODEL_CONFIG: /home/hdelecki/ford_ws/SequentialPerceptionPipeline/configs/detection/cbgs_pp_multihead.yaml
-MODEL_CKPT: /home/hdelecki/ford_ws/OpenPCDet/models/pp_multihead_nds5823_updated.pth
+MODEL_CONFIG: /mnt/hdd/hdelecki/ford_ws/src/SequentialPerceptionPipeline/configs/detection/cbgs_pp_multihead.yaml
+MODEL_CKPT: /mnt/hdd/hdelecki/ford_ws/models/pcdet/pp_multihead_nds5823_updated.pth
 PNTCLOUD_EXT: .pkl
 DETECTION_RESULTS: /scratch/hdelecki/ford/output/detection/results/detection_results.json
 

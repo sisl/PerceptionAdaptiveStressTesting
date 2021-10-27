@@ -14,7 +14,7 @@ if __name__ == '__main__':
                            'log_dir': None,
                            'exp_name': None,
                            'seed': 0,
-                           'n_parallel': 4,
+                           'n_parallel': 1,
                            'tabular_log_file': 'progress.csv'
                            }
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
                         'log_dir': None,
                         }
 
-    mcts_bpq_args = {'N': 3}
+    mcts_bpq_args = {'N': 10}
 
     # MCTS settings
     run_experiment_args['log_dir'] = base_log_dir + '/mcts'
