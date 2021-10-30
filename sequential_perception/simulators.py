@@ -14,7 +14,7 @@ from nuscenes.eval.prediction.data_classes import Prediction
 from nuscenes.prediction.helper import PredictHelper, convert_global_coords_to_local
 from nuscenes.utils.geometry_utils import points_in_box, view_points
 
-from sequential_perception.classical_pipeline import ClassicalPerceptionPipeline
+from sequential_perception.classical_pipeline import ClassicalPerceptionPipeline, PerceptionPipeline
 from sequential_perception.evaluation import PipelineEvaluation, compute_prediction_metrics, load_sample_gt
 from sequential_perception.pcdet_utils import get_boxes_for_pcdet_data, update_data_dict
 from sequential_perception.nuscenes_utils import get_ordered_samples, render_box_with_pc, vis_sample_pointcloud
@@ -1493,24 +1493,7 @@ class OpenLoopFogPerceptionSimulator:
                                    # pc=self.pcdet_infos[sample]['points'][self.sample_to_point_idxs[sample], :].T,
                                    pc=points.T,
                                    savepath=savepath)
-        # ax = render_box_with_pc(self.nuscenes,
-        #                         self.eval_samples[self.step-1],
-        #                         self.target_instance,
-        #                         points[:, :4].T,
-        #                         pred_boxes=self.detections[self.step-1][sample_token],
-        #                         margin=6)
-        
-        # highlight removed points
         plt.sca(ax)
-        # idxs_in_box = self.sample_to_point_idxs[sample_token]
-        # idxs_remove_mask = bernoulli.rvs(self.drop_likelihood,
-        #                                     size=idxs_in_box.shape[0],
-        #                                     random_state=self.action)
-        # idxs_to_remove = idxs_in_box[idxs_remove_mask>0]
-        # ax.scatter(points[idxs_to_remove, 0],
-        #            points[idxs_to_remove, 1],
-        #            c='r',
-        #            s=3)
 
 
         render_path = render_path = '/mnt/hdd/output/ford/ast/fog/plots/'

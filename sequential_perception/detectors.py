@@ -97,3 +97,42 @@ class OpenPCDetector:
         }    
         #return annos
         return nusc_annos
+
+
+class PCDetModule:
+    def __init__(self,
+                 model,
+                 nuscenes: NuScenes,
+                 ext: str = '.pkl'):
+        model.cuda()
+        model.eval()
+        self.model = model
+        self.ext = ext
+        self.nuscenes = nuscenes
+        self.pcdet_dataset = model.dataset
+
+    @torch.no_grad()
+    def __call__(self, data_dicts: List[Dict]) -> Dict:
+        pred_dict_batch = []
+        batch_dict = {'metadata': [], 'frame_id':[]}
+        for data_dict in data_dicts:
+            data_dict = self.pcdet_dataset.collate_batch([data_dict])
+            load_data_to_gpu(data_dict)
+            pred_dicts, _ = self.model.forward(data_dict)
+
+            pred_dict_batch += pred_dicts
+            batch_dict['metadata'].append(data_dict['metadata'][0])
+            batch_dict['frame_id'].append(data_dict['frame_id'][0])
+
+        annos = self.pcdet_dataset.generate_prediction_dicts(batch_dict, pred_dict_batch, self.pcdet_dataset.class_names)
+ 
+        nusc_annos = nuscenes_utils.transform_det_annos_to_nusc_annos(annos, self.nuscenes)
+        nusc_annos['meta'] = {
+            'use_camera': False,
+            'use_lidar': True,
+            'use_radar': False,
+            'use_map': False,
+            'use_external': False,
+        }    
+
+        return nusc_annos
