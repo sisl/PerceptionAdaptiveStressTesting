@@ -356,11 +356,14 @@ class CoverNetPredictModule:
         # self.covernet.cuda()
         # self.covernet.eval()
         self.covernet = covernet
+        self.covernet.cuda()
+        self.covernet.eval()
 
         # Trajectories
         # trajectories = pickle.load(open(eps_sets_path, 'rb'))
         # self.trajectories = torch.Tensor(trajectories).to(self.device)
-        self.trajectories = trajectory_sets
+        #self.trajectories = trajectory_sets
+        self.trajectories = trajectory_sets.to(self.device)
 
     def _get_agent_state(self, track_helper, instance: str, sample: str):
         """
