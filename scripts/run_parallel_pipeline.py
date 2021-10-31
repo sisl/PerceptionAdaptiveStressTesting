@@ -110,7 +110,7 @@ def main(pipeline_config):
     ## Tracking
     start = time.time()
     print('Running Tracking ...')
-    tracks = pipeline.run_tracking(detections)
+    tracks = pipeline.run_tracking(detections, batch_mode=True)
     print('Done. Tracking took {} sec'.format(time.time() - start))
 
 
@@ -133,11 +133,13 @@ def main(pipeline_config):
     ## Prediction
     print('Running Predicton ...')
     predict_tokens = get_prediction_challenge_split(pipeline_config['NUSCENES_SPLIT'], dataroot=pipeline_config['NUSCENES_DATAROOT'])
+    predict_tokens = [t for t in predict_tokens if t.split('_')[1] in scene_sample_tokens]
 
     start = time.time()
     preds = pipeline.run_prediction(tracks, predict_tokens)
     print('Done. Prediction took {} sec'.format(time.time() - start))
     print('Done')
+    print(len(preds))
 
     prediction_results_path = Path(pipeline_config['PREDICTION']['RESULTS'])
     prediction_results_path.parent.mkdir(parents=True, exist_ok=True)

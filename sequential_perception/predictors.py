@@ -444,7 +444,8 @@ class CoverNetPredictModule:
                 self.output_trajs = None
                 self.output_probs = None
                 self.predicted_track = None
-                return None
+                #return None
+                continue
             self.predicted_track = nearest_track
             
             instance = nearest_track['tracking_id']

@@ -57,8 +57,8 @@ def main(version: str, data_root: str, submission_path: str,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Perform evaluation of prediction results')
     parser.add_argument('--version', help='nuScenes version number.', default='v1.0-mini')
-    parser.add_argument('--data_root', help='Directory storing NuScenes data.', default='/scratch/hdelecki/ford/data/sets/nuscenes/v1.0-mini')
-    parser.add_argument('--submission_path', help='Path storing the submission file.', default='/scratch/hdelecki/ford/output/prediction/test_prediction/mini_val_tracking_results.json')
+    parser.add_argument('--data_root', help='Directory storing NuScenes data.', default='/mnt/hdd/data/sets/nuscenes/v1.0-mini')
+    parser.add_argument('--submission_path', help='Path storing the submission file.', default='/mnt/hdd/ford_ws/output/prediction/results/prediction_results.json')
     parser.add_argument('--config_name', help='Config file to use.', default='predict_2020_icra.json')
     args = parser.parse_args()
     main(args.version, args.data_root, args.submission_path, args.config_name)
