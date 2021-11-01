@@ -7,7 +7,7 @@ import yaml
 from pathlib import Path
 import time
 
-#import numpy as np
+import numpy as np
 from pcdet.datasets.nuscenes.nuscenes_dataset import NuScenesDataset
 from pcdet.datasets.nuscenes import nuscenes_utils
 import torch
@@ -52,10 +52,10 @@ def get_pfn_latent(pfn, inputs):
     x = F.relu(x)
     x_max = torch.max(x, dim=1, keepdim=True)[0]
 
-    x_argmax = torch.argmax(x, dim=1, keepdim=True)
+    x_argmax = torch.argmax(x, dim=1)
 
     if pfn.last_vfe:
-        return x_max
+        return x_max, x_argmax
     else:
         x_repeat = x_max.repeat(1, inputs.shape[1], 1)
         x_concatenated = torch.cat([x, x_repeat], dim=2)
@@ -91,10 +91,21 @@ def get_pointpillars_critical_set(model, batch_dict):
     mask = torch.unsqueeze(mask, -1).type_as(voxel_features)
     features *= mask
 
-    latent = get_pfn_latent(pfn_layer, features)
+    latent, latent_idxs = get_pfn_latent(pfn_layer, features)
 
 
-    return latent
+    critical_point_idxs = {}
+    for i in range(latent_idxs.shape[0]):
+        critical_point_idxs[i] = torch.unique(latent_idxs[i, :])
+
+    critical_sets = {}
+    #points = batch_dict['points'].cpu()
+    for pillar_idx, point_idxs in critical_point_idxs.items():
+        pillar_critical_set = voxel_features[pillar_idx, point_idxs, :].cpu()
+        critical_sets[pillar_idx] = pillar_critical_set
+
+
+    return critical_sets
     # for pfn in self.pfn_layers:
     #     features = pfn(features)
 
@@ -158,8 +169,33 @@ def main():
     # import numpy as np
 
     with torch.no_grad():
-        latent = get_pointpillars_critical_set(model, data_dict)
-        print(latent.shape)
+        critical_sets = get_pointpillars_critical_set(model, data_dict)
+
+
+    # create array of points 
+    critical_set_array = np.vstack(list(critical_sets.values()))
+
+    critical_set_array = critical_set_array[~np.all(critical_set_array == 0, axis=1)]
+    critical_set_array  = np.unique(critical_set_array , axis=0)
+    print(critical_set_array.shape)
+    print(data_dict['points'].shape)
+
+
+    # Half of the points (~110000) are in the critical set (!!)
+
+    # Need to reduce to points near target
+
+
+
+
+
+
+    #list_of_points = list(critical_sets.values()
+    #print(len(list_of_points))
+    #critical_set_points = torch.Tensor(list(critical_sets.values()))
+
+
+    
 
     # fig, axs = plt.subplots(8,8, figsize=(15, 6), facecolor='w', edgecolor='k')
     # fig, axs = plt.subplots(8,8, figsize=(15, 15), facecolor='w', edgecolor='k')
