@@ -11,6 +11,7 @@ import time
 from pcdet.datasets.nuscenes.nuscenes_dataset import NuScenesDataset
 from pcdet.datasets.nuscenes import nuscenes_utils
 import torch
+import torch.nn.functional as F
 
 from pcdet.config import cfg, cfg_from_yaml_file
 from pcdet.models import build_network, load_data_to_gpu
@@ -34,6 +35,72 @@ def load_pcdet_config(detection_config):
         pcdet_config['DATA_CONFIG']['INFO_PATH']['test'] = pcdet_config['DATA_CONFIG']['INFO_PATH']['train']
 
     return pcdet_config
+
+
+def get_pfn_latent(pfn, inputs):
+    if inputs.shape[0] > pfn.part:
+        # nn.Linear performs randomly when batch size is too large
+        num_parts = inputs.shape[0] // pfn.part
+        part_linear_out = [pfn.linear(inputs[num_part*pfn.part:(num_part+1)*pfn.part])
+                            for num_part in range(num_parts+1)]
+        x = torch.cat(part_linear_out, dim=0)
+    else:
+        x = pfn.linear(inputs)
+    torch.backends.cudnn.enabled = False
+    x = pfn.norm(x.permute(0, 2, 1)).permute(0, 2, 1) if pfn.use_norm else x
+    torch.backends.cudnn.enabled = True
+    x = F.relu(x)
+    x_max = torch.max(x, dim=1, keepdim=True)[0]
+
+    x_argmax = torch.argmax(x, dim=1, keepdim=True)
+
+    if pfn.last_vfe:
+        return x_max
+    else:
+        x_repeat = x_max.repeat(1, inputs.shape[1], 1)
+        x_concatenated = torch.cat([x, x_repeat], dim=2)
+
+
+def get_pointpillars_critical_set(model, batch_dict):
+    pillar_vfe = model.module_list[0]
+    assert len(pillar_vfe.pfn_layers) == 1
+    pfn_layer = pillar_vfe.pfn_layers[0]
+
+
+    voxel_features, voxel_num_points, coords = batch_dict['voxels'], batch_dict['voxel_num_points'], batch_dict['voxel_coords']
+    points_mean = voxel_features[:, :, :3].sum(dim=1, keepdim=True) / voxel_num_points.type_as(voxel_features).view(-1, 1, 1)
+    f_cluster = voxel_features[:, :, :3] - points_mean
+
+    f_center = torch.zeros_like(voxel_features[:, :, :3])
+    f_center[:, :, 0] = voxel_features[:, :, 0] - (coords[:, 3].to(voxel_features.dtype).unsqueeze(1) * pillar_vfe.voxel_x + pillar_vfe.x_offset)
+    f_center[:, :, 1] = voxel_features[:, :, 1] - (coords[:, 2].to(voxel_features.dtype).unsqueeze(1) * pillar_vfe.voxel_y + pillar_vfe.y_offset)
+    f_center[:, :, 2] = voxel_features[:, :, 2] - (coords[:, 1].to(voxel_features.dtype).unsqueeze(1) * pillar_vfe.voxel_z + pillar_vfe.z_offset)
+
+    if pillar_vfe.use_absolute_xyz:
+        features = [voxel_features, f_cluster, f_center]
+    else:
+        features = [voxel_features[..., 3:], f_cluster, f_center]
+
+    if pillar_vfe.with_distance:
+        points_dist = torch.norm(voxel_features[:, :, :3], 2, 2, keepdim=True)
+        features.append(points_dist)
+    features = torch.cat(features, dim=-1)
+
+    voxel_count = features.shape[1]
+    mask = pillar_vfe.get_paddings_indicator(voxel_num_points, voxel_count, axis=0)
+    mask = torch.unsqueeze(mask, -1).type_as(voxel_features)
+    features *= mask
+
+    latent = get_pfn_latent(pfn_layer, features)
+
+
+    return latent
+    # for pfn in self.pfn_layers:
+    #     features = pfn(features)
+
+
+
+
 
 
 def main():
@@ -73,22 +140,26 @@ def main():
     #     batch_dict = cur_module(batch_dict)
     #     print(batch_dict.keys())
     load_data_to_gpu(data_dict)
+    # with torch.no_grad():
+    #     for i in range(n_modules):
+    #         cur_module = model.module_list[i]
+    #         data_dict = cur_module(data_dict)
+    #         print(data_dict.keys())
+
+
+    # pillar_features = data_dict['pillar_features'].cpu()
+    # spatial_features = data_dict['spatial_features'].cpu()
+
+    # print(pillar_features.shape)
+    # print(spatial_features.shape)
+    # print(torch.max(spatial_features))
+
+    # import matplotlib.pyplot as plt
+    # import numpy as np
+
     with torch.no_grad():
-        for i in range(n_modules):
-            cur_module = model.module_list[i]
-            data_dict = cur_module(data_dict)
-            print(data_dict.keys())
-
-
-    pillar_features = data_dict['pillar_features'].cpu()
-    spatial_features = data_dict['spatial_features'].cpu()
-
-    print(pillar_features.shape)
-    print(spatial_features.shape)
-    print(torch.max(spatial_features))
-
-    import matplotlib.pyplot as plt
-    import numpy as np
+        latent = get_pointpillars_critical_set(model, data_dict)
+        print(latent.shape)
 
     # fig, axs = plt.subplots(8,8, figsize=(15, 6), facecolor='w', edgecolor='k')
     # fig, axs = plt.subplots(8,8, figsize=(15, 15), facecolor='w', edgecolor='k')
@@ -99,14 +170,14 @@ def main():
     #     axs[i].imshow(spatial_features[0, i, :, :])
     #     #axs[i].set_title(str(i))
 
-    for j in range(0,64,4):
-        fig, axs = plt.subplots(2,2, facecolor='w',edgecolor='k')
-        axs = axs.ravel()
-        for i in range(4):
-            axs[i].imshow(spatial_features[0, i+j, :, :])
+    # for j in range(0,64,4):
+    #     fig, axs = plt.subplots(2,2, facecolor='w',edgecolor='k')
+    #     axs = axs.ravel()
+    #     for i in range(4):
+    #         axs[i].imshow(spatial_features[0, i+j, :, :])
         
 
-    plt.show()
+    # plt.show()
 
 
 
