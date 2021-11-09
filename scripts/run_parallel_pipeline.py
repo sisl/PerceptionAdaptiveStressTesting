@@ -1,12 +1,7 @@
 import argparse
 import time
 import pickle
-# from nuscenes.eval.common.config import config_factory
-# from nuscenes.eval.common.data_classes import EvalBoxes
-# from nuscenes.eval.detection.data_classes import DetectionBox
-# from nuscenes.eval.prediction.data_classes import Prediction
-# from nuscenes.eval.tracking.data_classes import TrackingBox
-# from nuscenes.eval.tracking.evaluate import TrackingEval
+
 import yaml
 import json
 from pathlib import Path
@@ -90,7 +85,7 @@ def main(pipeline_config):
     predictor = CoverNetPredictModule(covernet, trajectories, nusc_scene)
 
 
-    ######## Create Predictor ########
+    ######## Create Pipeline ########
     # pipeline = ClassicalPerceptionPipeline(pipeline_config, nuscenes, pcdet_infos)
     pipeline = PerceptionPipeline(detector, tracker, predictor)
 

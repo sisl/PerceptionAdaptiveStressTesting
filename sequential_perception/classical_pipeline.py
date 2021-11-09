@@ -146,7 +146,7 @@ class PerceptionPipeline:
 
     def __call__(self, data_dicts: List[Dict], pred_tokens: List[str], reset=True):
         detections = self.run_detection(data_dicts)
-        tracks = self.run_tracking(detections, reset, batch_mode=reset)
+        tracks = self.run_tracking(detections, batch_mode=reset)
         predictions = self.run_prediction(tracks, pred_tokens)
         # return detections, tracks, predictions
         if reset:

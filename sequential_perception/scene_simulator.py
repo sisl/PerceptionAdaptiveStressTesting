@@ -1,7 +1,9 @@
 from random import sample
 import time
 from typing import Any, Dict, List
+from unicodedata import category
 import numpy as np
+from numpy.core.fromnumeric import cumsum
 from scipy.stats import bernoulli
 import matplotlib.pyplot as plt
 
@@ -34,7 +36,8 @@ class FogScenePerceptionSimulator:
                  eval_metric = 'MinFDEK',
                  eval_k = 10,
                  eval_metric_th=10.0,
-                 no_pred_failure=True) -> None:
+                 no_pred_failure=True,
+                 logger=None) -> None:
 
         assert eval_metric in ['MinADEK', 'MinFDEK']
         assert eval_k in [1, 5, 10]
@@ -42,20 +45,39 @@ class FogScenePerceptionSimulator:
         self.nuscenes = nuscenes
         self.pipeline = pipeline
         self.pipeline_config = pipeline_config
-        self.pcdet_dataset = pipeline.pcdet_dataset
+        self.pcdet_dataset = pipeline.detector.pcdet_dataset
         self.no_pred_failure = no_pred_failure # Fail if no prediction during an eval sample?
         self._action = None
         self.predict_eval_config_name = 'predict_2020_icra.json'
+        nusc_helper = PredictHelper(self.nuscenes)
+        self.predict_eval_config = load_prediction_config(nusc_helper, self.predict_eval_config_name)
+
+        self.max_range = max_range
 
         # Disturbance params
         self.beta = BetaRadomization(fog_density, 0)
         self.scatter_fraction = scatter_fraction
         self.fog_density = fog_density
+
+        self.s0 = 0
+        self.eval_idx = self.s0
+        #self.horizon = len(self.eval_samples)
+        self.step = 0
+        self.action = None
+        self.info = []
+
+        self.eval_metric = eval_metric
+        self.eval_k = eval_k
+        self.eval_metric_th = eval_metric_th
+        
+        self.detections = []
+        self.tracks = []
+        self.predictions = []
         
 
         # Get all samples for scene
         ordered_samples = get_ordered_samples(nuscenes, scene_token)
-        ordered_samples = ordered_samples[1:]
+        #ordered_samples = ordered_samples[1:]
         assert len(ordered_samples) > 30
 
         #self.eval_samples = []
@@ -64,7 +86,7 @@ class FogScenePerceptionSimulator:
         # 1. The vehicle is not parked
         # 2. The vehicle is within max_range meters of ego
 
-        nusc_helper = PredictHelper(self.nuscenes)
+        
         # for sample_token in ordered_samples:
         #     # get all non parked cars, buses, trucks
         #     anns = nusc_helper.get_annotations_for_sample(sample_token)
@@ -82,8 +104,116 @@ class FogScenePerceptionSimulator:
 
         # Iterate over each instance in the scene
 
-        # Get rid of pred tokens with fewer than min_instances in scene
+        # map tokens -> future trajectories
+        pred_candidate_info = {}
 
+        for inst_record in self.nuscenes.instance:
+            cat = self.nuscenes.get('category', inst_record['category_token'])
+            
+            # If this is a vehicle we can predict for
+            if np.any([v in cat['name'] for v in ['car', 'bus', 'truck']]):
+
+                # Iterate through each annotation of this instance
+
+                #ann_tokens = self.nuscenes.field2token('sample_annotation', 'instance_token', inst_record['token'])
+                ann_tokens = []
+                first_ann_token = inst_record['first_annotation_token']
+                cur_ann_record = self.nuscenes.get('sample_annotation', first_ann_token)
+                while cur_ann_record['next'] != '':
+                    ann_tokens.append(cur_ann_record['token'])
+                    cur_ann_record = self.nuscenes.get('sample_annotation', cur_ann_record['next'])
+
+
+                # Must have at least 6 seconds (12 annotations) of in scene
+                if len(ann_tokens) < 12:
+                    continue
+
+                # Is it driving (not parked)?
+                # Has it been in range for at least n steps?
+                # Are there at least 6 consecutive seconds remaining in the scene?
+                # If yes to all above - make a prediction
+                
+                consecutive_tsteps_in_range = 0
+                min_tsteps = 3
+
+                
+                
+                for ann_token in ann_tokens:
+                    ann_record = self.nuscenes.get('sample_annotation', ann_token)
+
+                    if ann_record['sample_token'] == ordered_samples[0]:
+                        continue
+
+                    current_attr = self.nuscenes.get('attribute', ann_record['attribute_tokens'][0])['name']
+                    if 'stopped' in current_attr:
+                        continue
+
+
+                    # get range of annotation
+                    sample_token = ann_record['sample_token']
+                    sample_rec = self.nuscenes.get('sample', sample_token)
+                    sd_record = self.nuscenes.get('sample_data', sample_rec['data']['LIDAR_TOP'])
+                    pose_record = self.nuscenes.get('ego_pose', sd_record['ego_pose_token'])
+
+
+                    # Both boxes and ego pose are given in global coord system, so distance can be calculated directly.
+                    box = self.nuscenes.get_box(ann_record['token'])
+                    ego_translation = (box.center[0] - pose_record['translation'][0],
+                                    box.center[1] - pose_record['translation'][1],
+                                    box.center[2] - pose_record['translation'][2])
+
+                    ann_range = np.linalg.norm(ego_translation)
+
+
+                    if ann_range <= self.max_range:
+                        consecutive_tsteps_in_range += 1
+                    
+                    if consecutive_tsteps_in_range >= min_tsteps:
+
+                        # Can we get the next six seconds?
+                        try:
+                            ann_future = nusc_helper.get_future_for_agent(inst_record['token'],
+                                                            ann_record['sample_token'],
+                                                            seconds=6.0,
+                                                            in_agent_frame=False)
+
+                            #print('Good annotation!')
+                            #print(ann_record)
+                            # generate a prediction token
+                            if ann_future.shape[0] >= 12:
+                                pred_token = inst_record['token'] + '_' + ann_record['sample_token']
+
+                                pred_candidate_info[pred_token] = ann_future
+
+                        except:
+                            pass
+        
+
+        scene_data_dicts = [self.pcdet_dataset[i] for i in range(len(self.pcdet_dataset))]
+        all_pred_tokens = list(pred_candidate_info.keys())
+        dets, tracks, preds = self.pipeline(scene_data_dicts, all_pred_tokens, reset=True)
+        self.init_preds = preds
+        self.pred_candidate_info = pred_candidate_info
+
+        prediction_list = [Prediction.deserialize(p) for p in self.init_preds]
+        passing_pred_tokens = []
+        for pred in prediction_list:
+            pred_token = pred.instance + '_' + pred.sample
+            gt_pred = self.pred_candidate_info[pred_token]
+            sample_metrics = compute_prediction_metrics(pred, gt_pred, self.predict_eval_config)
+
+            eval_idx = self.eval_k // 5
+            eval_value = sample_metrics[self.eval_metric][pred.instance][0][eval_idx]
+            # minadek = sample_metrics['MinADEK'][self.target_instance][0][-1]
+            # minade5 = sample_metrics['MinADEK'][self.target_instance][0][-2]
+            # minfde = sample_metrics['MinFDEK'][self.target_instance][0][-1]
+            # missrate = sample_metrics['MissRateTopK_2'][self.target_instance]
+
+            print('{} value: {}'.format(self.eval_metric, eval_value))
+            if eval_value < self.eval_metric_th:
+                passing_pred_tokens.append(pred_token)
+
+        self.passing_pred_tokens = passing_pred_tokens
 
 
         # Run pipeline on true data
@@ -182,21 +312,6 @@ class FogScenePerceptionSimulator:
         # # Get predict tokens
         # self.predict_tokens = self.get_predict_tokens()
 
-        self.s0 = 0
-        self.eval_idx = self.s0
-        self.horizon = len(self.eval_samples)
-        self.step = 0
-        self.action = None
-        self.info = []
-
-        self.eval_metric = eval_metric
-        self.eval_k = eval_k
-        self.eval_metric_th = eval_metric_th
-        
-        self.detections = []
-        self.tracks = []
-        self.predictions = []
-
         self.reset(self.s0)
 
 
@@ -285,9 +400,11 @@ class FogScenePerceptionSimulator:
         self.beta = BetaRadomization(self.fog_density, 0)
         # Simulate up to evaluation
         #print('--RESET--')
-        for sample in self.base_detections['results'].keys():
-            sample_det = {sample: self.base_detections['results'][sample]}
-            self.pipeline.run_tracking(sample_det, batch_mode=False)
+
+        ## TODO FIX RESET
+        # for sample in self.base_detections['results'].keys():
+        #     sample_det = {sample: self.base_detections['results'][sample]}
+        #     self.pipeline.run_tracking(sample_det, batch_mode=False)
 
         return s0
 
