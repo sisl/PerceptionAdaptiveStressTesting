@@ -1,12 +1,14 @@
 import argparse
 import time
 import pickle
+import random
 
 import yaml
 import json
 from pathlib import Path
 
 import torch
+import numpy as np
 
 from nuscenes import NuScenes
 from nuscenes.prediction.models.backbone import ResNetBackbone
@@ -25,7 +27,16 @@ from sequential_perception.kalman_tracker import MultiObjectTrackByDetection
 from sequential_perception.nuscenes_utils import get_ordered_samples
 from sequential_perception.predictors import CoverNetPredictModule
 from sequential_perception.scene_simulator import FogScenePerceptionSimulator
+from sequential_perception.ast import PerceptionSimWrapper
 
+
+
+def set_random_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 def build_detector(pipeline_config, nusc):
     model_config_path = pipeline_config['DETECTION']['MODEL_CONFIG']
@@ -80,6 +91,9 @@ def build_pipeline(pipeline_config, detector, predictor):
 
 
 def main(pipeline_config):
+    set_random_seed
+
+
     # Load PCDet config
     # model_config_path = pipeline_config['DETECTION']['MODEL_CONFIG']
     # pcdet_config = cfg_from_yaml_file(model_config_path, cfg)
@@ -95,6 +109,7 @@ def main(pipeline_config):
     #                                root_path=Path(pcdet_data_path), logger=logger)
 
     # Create NuScenes
+
     dataroot = '/mnt/hdd/data/sets/nuscenes/v1.0-mini'
     version = 'v1.0-mini'
     scene_token = 'fcbccedd61424f1b85dcbf8f897f9754'
@@ -112,12 +127,34 @@ def main(pipeline_config):
 
 
 
-    sim = FogScenePerceptionSimulator(nusc_scene, pipeline, eval_metric='MinFDEK', eval_k=1, eval_metric_th=10.0)
+    sim = FogScenePerceptionSimulator(nusc_scene, pipeline, eval_metric='MinFDEK', fog_density=0.005, scatter_fraction=0.05, eval_k=1, eval_metric_th=10.0)
     init_pred_tokens = list(sim.pred_candidate_info.keys())
+    
     print(len(init_pred_tokens))
     #print(sim.init_preds)
     print(len(sim.passing_pred_tokens))
 
+    ast_sim = PerceptionSimWrapper(sim)
+
+
+
+    s0 = [0]
+    actions = [tuple([i]) for i in range(ast_sim.simulator.horizon)]
+    #     actions = pickle.load(f)[0]
+
+    print('Actions: {}'.format(actions))
+
+    # for i in range(6):
+
+    print('-----------------')
+    ast_sim.reset(s0)
+    for a in actions:
+        ast_sim.closed_loop_step(a)
+        reward_info = ast_sim.get_reward_info()
+        #print(ast_sim.is_terminal())
+        print(ast_sim.is_goal())
+
+    print(ast_sim.simulator.cnt)
 
 
 if __name__ == '__main__':
