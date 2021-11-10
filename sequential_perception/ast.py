@@ -64,6 +64,60 @@ class PerceptionASTSimulator(ASTSimulator):
         return self.simulator.render()
 
 
+class PerceptionSimWrapper(ASTSimulator):
+    def __init__(self,
+                 simulator,
+                 **kwargs):
+                 
+        # if perception_args is None:
+        #     perception_args = {}
+
+        #self.simulator = PerceptionSim(nuscenes, pipeline, **perception_args)
+        self.simulator = simulator
+
+        super().__init__(**kwargs)
+
+    def simulate(self, actions, s_0):
+        action_list = [a[0] for a in actions]
+        #return self.simulator.simulate(actions, s_0[0], simulation_horizon=self.c_max_path_length)
+        # return self.simulator.simulate(action_list, s_0[0], simulation_horizon=self.c_max_path_length) 
+        return self.simulator.simulate(action_list, s_0[0]) 
+
+    def reset(self, s_0):
+        super(PerceptionSimWrapper, self).reset(s_0=s_0)
+        # self.observation = np.ndarray.flatten(self.simulator.reset(s_0))
+        self.observation = np.array([self.simulator.reset(s_0[0])])
+        return self.observation_return()
+
+    def closed_loop_step(self, action):
+        # self.observation = np.ndarray.flatten(self.simulator.step_simulation(action))
+        self.observation = np.array([self.simulator.step_simulation(action[0])])
+        return self.observation_return()
+
+    def get_reward_info(self):
+        reward_info = {'action_prob': self.simulator.action_prob,
+                       'is_terminal': self.is_terminal(),
+                       'is_goal': self.is_goal()
+                       }
+        return reward_info
+
+    def is_goal(self):
+        return self.simulator.is_goal()
+    
+    def is_terminal(self):
+        return self.simulator.is_terminal()
+
+    def clone_state(self):
+        return [self.simulator.step]
+
+    def restore_state(self, in_simulator_state):
+        pass
+
+    def render(self, **kwargs):
+        pass
+        #return self.simulator.render()
+
+
 class PerceptionASTSpaces(ASTSpaces):
     def __init__(self, rsg_length=3):
         self.rsg_length = rsg_length

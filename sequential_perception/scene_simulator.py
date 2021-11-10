@@ -75,6 +75,8 @@ class FogScenePerceptionSimulator:
         self.predictions = []
         
 
+        
+
         # Get all samples for scene
         ordered_samples = get_ordered_samples(nuscenes, scene_token)
         #ordered_samples = ordered_samples[1:]
@@ -215,6 +217,35 @@ class FogScenePerceptionSimulator:
 
         self.passing_pred_tokens = passing_pred_tokens
 
+        # get unique samples where we want to run evaluation (find latest sample)
+        token_sample_idxs = [ordered_samples.index(t.split('_')[1]) for t in self.passing_pred_tokens]
+        self.last_sample_idx = np.max(token_sample_idxs)
+        self.first_sample_idx = np.min(token_sample_idxs) - 3
+        self.first_sample_idx = np.max([self.first_sample_idx, 1])
+
+        self.horizon = (self.last_sample_idx - self.first_sample_idx) + 1
+
+        self.ordered_sample_tokens = ordered_samples
+
+        # Load all PCDet data for scene
+        pcdet_dataset = pipeline.detector.pcdet_dataset
+        self.pcdet_infos = {}
+        for data_dict in pcdet_dataset:
+            if data_dict['metadata']['token'] in ordered_samples:
+                self.pcdet_infos[data_dict['metadata']['token']] = data_dict
+
+
+        # Map sample tokens to lists of pred tokens
+        sample2predtokens = {}
+        for sample_token in self.ordered_sample_tokens:
+            pred_tokens = [t for t in self.passing_pred_tokens if sample_token in t]
+            sample2predtokens[sample_token] = pred_tokens
+
+        self.sample2predtokens = sample2predtokens
+
+        self.ordered_sample_tokens = self.ordered_sample_tokens[self.first_sample_idx-1:self.last_sample_idx]
+
+
 
         # Run pipeline on true data
         #scene_data_dicts = [self.pcdet_dataset[i] for i in range(len(self.pcdet_dataset))]
@@ -347,7 +378,7 @@ class FogScenePerceptionSimulator:
     def step_simulation(self, action: int):
         idx = self.step
         self.action = action
-        sample_token = self.eval_samples[idx]
+        sample_token = self.ordered_sample_tokens[idx] #  sample_token = self.eval_samples[idx]
         print('STEP: {}'.format(self.step))
 
         data_dict = self.pcdet_infos[sample_token]
@@ -366,7 +397,7 @@ class FogScenePerceptionSimulator:
         new_points, action_prob = haze_point_cloud(points, self.beta, self.scatter_fraction, action)
         #new_points = new_points[:, :5]
         self.new_points = new_points
-        new_data_dict = update_data_dict(self.pipeline.pcdet_dataset, data_dict, new_points[:, :5])
+        new_data_dict = update_data_dict(self.pipeline.detector.pcdet_dataset, data_dict, new_points[:, :5])
         self.action_prob = action_prob
         #self.action_prob = self.get_action_prob(idxs_remove_mask)
 
@@ -375,14 +406,22 @@ class FogScenePerceptionSimulator:
         # Run pipeline
         detections = self.pipeline.run_detection([new_data_dict])
         tracks = self.pipeline.run_tracking(detections['results'], batch_mode=False)
-        pred_token = self.target_instance + '_' + sample_token
-        predictions = self.pipeline.run_prediction(tracks, [pred_token])
+        
+        
+        #pred_token = self.target_instance + '_' + sample_token
+        pred_tokens = [t for t in self.passing_pred_tokens if sample_token in t]
+        if len(pred_tokens) > 0:
+            predictions = self.pipeline.run_prediction(tracks, pred_tokens)
+            prediction_list = [Prediction.deserialize(p) for p in predictions]
+        else:
+            prediction_list = []
 
         # Log
         det_boxes = EvalBoxes.deserialize(detections['results'], DetectionBox)
         self.detections.append(det_boxes)
         self.tracks.append(tracks)
-        prediction_list = [Prediction.deserialize(p) for p in predictions]
+        # prediction_list = [Prediction.deserialize(p) for p in predictions]
+        # self.predictions.append(prediction_list)
         self.predictions.append(prediction_list)
         self.log()
         self.step += 1
@@ -398,10 +437,14 @@ class FogScenePerceptionSimulator:
         self.predictions = []
         self.pipeline.reset()
         self.beta = BetaRadomization(self.fog_density, 0)
+        self.cnt = 0
         # Simulate up to evaluation
         #print('--RESET--')
 
         ## TODO FIX RESET
+        #Simulate up to first sample index
+        # for i in range(self.first_sample_idx):
+        #     sample_token = self.ordered_sample_tokens[i]
         # for sample in self.base_detections['results'].keys():
         #     sample_det = {sample: self.base_detections['results'][sample]}
         #     self.pipeline.run_tracking(sample_det, batch_mode=False)
@@ -409,21 +452,28 @@ class FogScenePerceptionSimulator:
         return s0
 
     def is_goal(self):
-        if len(self.predictions[-1]) == 0 and self.no_pred_failure:
+        # if len(self.predictions[-1]) == 0 and self.no_pred_failure:
+        #     return True
+        sample_token = self.ordered_sample_tokens[self.step-1]
+        num_preds = len([p for p in self.predictions[-1] if p])
+        if num_preds != len(self.sample2predtokens[sample_token]) and self.no_pred_failure:
             return True
         
         # If there is a prediction, check if avg error greater than threshold
         goal = False
         for pred in self.predictions[-1]:
-            gt_pred = self.sample_to_gt_pred[pred.sample]
+            #self.cnt += 1
+            #gt_pred = self.sample_to_gt_pred[pred.sample]
+            pred_token = pred.instance + '_' + pred.sample
+            gt_pred = self.pred_candidate_info[pred_token]
             sample_metrics = compute_prediction_metrics(pred, gt_pred, self.predict_eval_config)
 
             eval_idx = self.eval_k // 5
-            eval_value = sample_metrics[self.eval_metric][self.target_instance][0][eval_idx]
-            minadek = sample_metrics['MinADEK'][self.target_instance][0][-1]
-            minade5 = sample_metrics['MinADEK'][self.target_instance][0][-2]
-            minfde = sample_metrics['MinFDEK'][self.target_instance][0][-1]
-            missrate = sample_metrics['MissRateTopK_2'][self.target_instance]
+            eval_value = sample_metrics[self.eval_metric][pred.instance][0][eval_idx]
+            # minadek = sample_metrics['MinADEK'][self.target_instance][0][-1]
+            # minade5 = sample_metrics['MinADEK'][self.target_instance][0][-2]
+            # minfde = sample_metrics['MinFDEK'][self.target_instance][0][-1]
+            # missrate = sample_metrics['MissRateTopK_2'][self.target_instance]
 
             print('{} value: {}'.format(self.eval_metric, eval_value))
             if eval_value > self.eval_metric_th:
