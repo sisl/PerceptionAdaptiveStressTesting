@@ -4,6 +4,9 @@ from typing import Any, Dict, List
 from unicodedata import category
 import numpy as np
 from numpy.core.fromnumeric import cumsum
+from nuscenes.eval.prediction.metrics import final_distances
+from nuscenes.prediction.input_representation.combinators import Rasterizer
+from nuscenes.prediction.input_representation.interface import InputRepresentation
 from scipy.stats import bernoulli
 import matplotlib.pyplot as plt
 
@@ -17,9 +20,11 @@ from nuscenes.utils.geometry_utils import points_in_box, view_points
 
 from sequential_perception.classical_pipeline import  PerceptionPipeline
 from sequential_perception.evaluation import compute_prediction_metrics, load_sample_gt
+from sequential_perception.input_representation_tracks import AgentBoxesFromTracking, StaticLayerFromTracking
 from sequential_perception.pcdet_utils import get_boxes_for_pcdet_data, update_data_dict
 from sequential_perception.nuscenes_utils import get_ordered_samples, render_box_with_pc, vis_sample_pointcloud
 from sequential_perception.disturbances import BetaRadomization, haze_point_cloud
+from sequential_perception.predict_helper_tracks import TrackingResultsPredictHelper
 
 class FogScenePerceptionSimulator:
     def __init__(self,
@@ -106,6 +111,18 @@ class FogScenePerceptionSimulator:
 
         # Iterate over each instance in the scene
 
+        # Load all PCDet data for scene
+        pcdet_dataset = pipeline.detector.pcdet_dataset
+        self.pcdet_infos = {}
+        # for data_dict in pcdet_dataset:
+        #     if data_dict['metadata']['token'] in ordered_samples:
+        #         self.pcdet_infos[data_dict['metadata']['token']] = data_dict
+        print(len(pcdet_dataset))
+        for i in range(len(pcdet_dataset)):
+            data_dict = pcdet_dataset[i]
+            if data_dict['metadata']['token'] in ordered_samples:
+                self.pcdet_infos[data_dict['metadata']['token']] = data_dict
+
         # map tokens -> future trajectories
         pred_candidate_info = {}
 
@@ -191,7 +208,8 @@ class FogScenePerceptionSimulator:
                             pass
         
 
-        scene_data_dicts = [self.pcdet_dataset[i] for i in range(len(self.pcdet_dataset))]
+        #scene_data_dicts = [self.pcdet_dataset[i] for i in range(len(self.pcdet_dataset))]
+        scene_data_dicts = list(self.pcdet_infos.values())
         all_pred_tokens = list(pred_candidate_info.keys())
         dets, tracks, preds = self.pipeline(scene_data_dicts, all_pred_tokens, reset=True)
         self.init_preds = preds
@@ -226,13 +244,6 @@ class FogScenePerceptionSimulator:
         self.horizon = (self.last_sample_idx - self.first_sample_idx) + 1
 
         self.ordered_sample_tokens = ordered_samples
-
-        # Load all PCDet data for scene
-        pcdet_dataset = pipeline.detector.pcdet_dataset
-        self.pcdet_infos = {}
-        for data_dict in pcdet_dataset:
-            if data_dict['metadata']['token'] in ordered_samples:
-                self.pcdet_infos[data_dict['metadata']['token']] = data_dict
 
 
         # Map sample tokens to lists of pred tokens
@@ -438,6 +449,7 @@ class FogScenePerceptionSimulator:
         self.pipeline.reset()
         self.beta = BetaRadomization(self.fog_density, 0)
         self.cnt = 0
+        self.action_prob = 1
         # Simulate up to evaluation
         #print('--RESET--')
 
@@ -454,6 +466,9 @@ class FogScenePerceptionSimulator:
     def is_goal(self):
         # if len(self.predictions[-1]) == 0 and self.no_pred_failure:
         #     return True
+        if self.step == 0:
+            return False 
+
         sample_token = self.ordered_sample_tokens[self.step-1]
         num_preds = len([p for p in self.predictions[-1] if p])
         if num_preds != len(self.sample2predtokens[sample_token]) and self.no_pred_failure:
@@ -513,3 +528,165 @@ class FogScenePerceptionSimulator:
         idxs_to_remove = idxs_in_box[idxs_remove_mask>0]
         new_points = np.delete(points, idxs_to_remove, axis=0)
         return new_points
+
+
+    def _render_detection(self):
+        # from nuscenes.eval.detection.render import visualize_sample
+        # from nuscenes.eval.common.loaders import load_gt
+
+        # If no detections, do nothing
+        if len(self.detections) == 0:
+            return
+
+        # render_path = '/scratch/hdelecki/ford/output/ast/pointdrop/plots/'
+        render_path = '/mnt/hdd/ford_ws/output/ast/plots/test/'
+        det_boxes = self.detections[-1]
+        sample_token = det_boxes.sample_tokens[0]
+        sample_rec = self.nuscenes.get('sample', sample_token)
+        sd_record = self.nuscenes.get('sample_data', sample_rec['data']['LIDAR_TOP'])
+        cs_record = self.nuscenes.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
+        pose_record = self.nuscenes.get('ego_pose', sd_record['ego_pose_token'])
+        #det_boxes = EvalBoxes.deserialize(detections['results'], DetectionBox)
+        # gt_boxes = load_gt(self.nuscenes, 'mini_val', DetectionBox)
+        gt_boxes = load_sample_gt(self.nuscenes, sample_token, DetectionBox)
+        #gt_boxes_list = boxes_to_sensor(gt_boxes[sample_token], pose_record, cs_record)
+
+        # for box in gt_boxes_list:
+        #     if box.token == self.target_instance:
+        #         gt_box = box
+        #         break
+
+        # savepath = render_path + str(self.step) + '_' + sample_token
+        # points = self.pcdet_infos[sample_token]['points'],
+
+        # idxs_in_box = self.sample_to_point_idxs[sample_token]
+        # idxs_remove_mask = bernoulli.rvs(self.drop_likelihood,
+        #                                     size=idxs_in_box.shape[0],
+        #                                     random_state=self.action)
+        # idxs_to_remove = idxs_in_box[idxs_remove_mask>0]
+        # new_points = np.delete(points, idxs_to_remove, axis=0)
+        #points = self.get_pointcloud(sample_token, self.action)
+        #points = self.pcdet_infos[sample_token]['points']
+        #print(points.shape)
+        points = self.new_points
+
+        ax = vis_sample_pointcloud(self.nuscenes,
+                                   sample_token,
+                                   gt_boxes=gt_boxes,
+                                   pred_boxes=det_boxes,
+                                   # pc=self.pcdet_infos[sample]['points'][self.sample_to_point_idxs[sample], :].T,
+                                   pc=points.T,
+                                   savepath=None)
+        # ax = render_box_with_pc(self.nuscenes,
+        #                         self.eval_samples[self.step-1],
+        #                         self.target_instance,
+        #                         points[:, :4].T,
+        #                         pred_boxes=self.detections[self.step-1][sample_token],
+        #                         margin=6)
+        
+        # highlight removed points
+        plt.sca(ax)
+        # idxs_in_box = self.sample_to_point_idxs[sample_token]
+        # idxs_remove_mask = bernoulli.rvs(self.drop_likelihood,
+        #                                     size=idxs_in_box.shape[0],
+        #                                     random_state=self.action)
+        # idxs_to_remove = idxs_in_box[idxs_remove_mask>0]
+        scattered_points = points[points[:, -1] == 2, :]
+        ax.scatter(scattered_points[:, 0],
+                   scattered_points[:, 1],
+                   c='r',
+                   s=0.2)
+
+
+        #render_path = '/scratch/hdelecki/ford/output/ast/pointdrop/plots/'
+        savepath = render_path + str(self.step) + '_'+ sample_token
+        #plt.set_cmap('viridis')
+        plt.savefig(savepath, bbox_inches='tight')
+
+        return ax
+
+
+    def _render_prediction(self):
+        import matplotlib.cm
+        from nuscenes.eval.prediction.metrics import stack_ground_truth, mean_distances
+
+        if len(self.predictions[-1]) == 0:
+            return
+
+        track_helper = TrackingResultsPredictHelper(self.nuscenes, self.tracks[-1]['results'])
+        agent_rasterizer = AgentBoxesFromTracking(track_helper, seconds_of_history=self.seconds_of_history)
+        map_rasterizer = StaticLayerFromTracking(track_helper)
+        input_representation = InputRepresentation(map_rasterizer, agent_rasterizer, Rasterizer())
+
+        for i in range(len(self.predictions[-1])):
+            prediction = self.predictions[-1][i]
+            sample_token = prediction.sample
+            inst_token = prediction.instance
+            input_image = self.pipeline.predictor.input_image
+            output_trajs = self.pipeline.predictor.output_trajs
+            output_probs = self.pipeline.predictor.output_probs
+            # print(output_probs)
+
+            #gt_future = self.sample_to_gt_pred[sample_token]
+            pred_token = prediction.instance + '_' + prediction.sample
+            gt_future = self.pred_candidate_info[pred_token]
+            predicted_track = self.pipeline.predictor.predicted_track
+            gt_future_local = convert_global_coords_to_local(gt_future, predicted_track['translation'], predicted_track['rotation'])
+
+            stacked_ground_truth = stack_ground_truth(gt_future_local, prediction.number_of_modes)
+            mean_dists = mean_distances(np.array(output_trajs), stacked_ground_truth).flatten()
+            final_dists = final_distances(np.array(output_trajs), stacked_ground_truth).flatten()
+            dist_sorted_idxs = np.argsort(mean_dists)
+
+            render_path = '/mnt/hdd/ford_ws/output/ast/plots/test/'
+            savepath = render_path + str(self.step) + '_' + inst_token + '_' + sample_token
+
+            #colors = ['tab1', 'tab2', 'tab3', 'tab4', 'tab5', 'tab6', 'tab7', 'tab8', 'tab9', 'tab10']
+            cmap = matplotlib.cm.get_cmap('tab10')
+            msize=7
+            lwidth = 1.4
+            fig, ax = plt.subplots(1, 1, figsize=(9, 9))
+            plt.imshow(input_image)
+
+
+            if 'ADE' in self.eval_metric:
+                eval_arr = mean_dists
+            else:
+                eval_arr = final_dists
+            #for traj in output_trajs:
+            for i in range(5):
+                traj = output_trajs[i]
+                #plt.scatter(10.*traj[:, 0] + 250, -(10.*traj[:, 1]) + 400, color='green', s=10, alpha=output_probs[i])
+                #plt.scatter(10.*traj[:, 0] + 250, -(10.*traj[:, 1]) + 400, color=colors[i], s=10)
+                # label = 'p={:4.3f}'.format(output_probs[i])
+                label = 'p={:4.3f}, {}{}={:4.2f}'.format(output_probs[i], self.eval_metric[:-2], self.eval_k, eval_arr[i])
+                plt.plot(10.*traj[:, 0] + 250, -(10.*traj[:, 1]) + 400, color=cmap(i), marker='o', markersize=msize, label=label, zorder=10-i)
+
+            # Plot top 5 closest predicted
+            # for i in range(5):
+            #     idx = dist_sorted_idxs[i]
+            #     traj = output_trajs[idx]
+            #     #plt.scatter(10.*traj[:, 0] + 250, -(10.*traj[:, 1]) + 400, color='green', s=10, alpha=output_probs[i])
+            #     #plt.scatter(10.*traj[:, 0] + 250, -(10.*traj[:, 1]) + 400, color=colors[i], s=10)
+            #     label = 'P={:4.3f}, ADE={:4.2f}'.format(output_probs[idx], mean_dists[idx])
+            #     plt.plot(10.*traj[:, 0] + 250, -(10.*traj[:, 1]) + 400, color=cmap(i), marker='o', markersize=msize, linewidth=lwidth, label=label, zorder=10-i)
+
+            plt.plot(10.*gt_future_local[:, 0] + 250, -(10.*gt_future_local[:, 1]) + 400, color='black', marker='o', markersize=msize, linewidth=lwidth, label='GT')
+            #leg = plt.legend(facecolor='white', framealpha=1, bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+            leg = plt.legend(frameon=True, facecolor='white', framealpha=1, prop={'size': 14})
+            plt.xlim(0, 500)
+            plt.ylim(500, 0)
+            # Hide grid lines
+            ax.grid(False)
+
+            # Hide axes ticks
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            # plt.sca(ax)
+            # plt.show()
+                    
+            plt.savefig(savepath, dpi=600)
+            #plt.savefig(savepath, bbox_inches='tight')
+        plt.close('all')
+        #return ax

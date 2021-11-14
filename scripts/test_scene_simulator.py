@@ -9,6 +9,7 @@ from pathlib import Path
 
 import torch
 import numpy as np
+import  matplotlib.pyplot as plt
 
 from nuscenes import NuScenes
 from nuscenes.prediction.models.backbone import ResNetBackbone
@@ -91,7 +92,7 @@ def build_pipeline(pipeline_config, detector, predictor):
 
 
 def main(pipeline_config):
-    set_random_seed
+    set_random_seed(0)
 
 
     # Load PCDet config
@@ -110,8 +111,8 @@ def main(pipeline_config):
 
     # Create NuScenes
 
-    dataroot = '/mnt/hdd/data/sets/nuscenes/v1.0-mini'
-    version = 'v1.0-mini'
+    dataroot = '/mnt/hdd/data/sets/nuscenes/v1.0-trainval'
+    version = 'v1.0-trainval'
     scene_token = 'fcbccedd61424f1b85dcbf8f897f9754'
     nusc_scene_root = '/mnt/hdd/data/sets/nuscenes/v1.0-trainval/exported_scenes'
     nusc_scene_path = Path(nusc_scene_root)
@@ -126,33 +127,104 @@ def main(pipeline_config):
     pipeline = build_pipeline(pipeline_config, detector, predictor)
 
 
+    sim_args = {'eval_metric': 'MinFDEK',
+                'fog_density': 0.005,
+                'scatter_fraction': 0.05,
+                'eval_k': 5,
+                'eval_metric_th': 20.0}
+    # sim = FogScenePerceptionSimulator(nusc_scene, pipeline, eval_metric='MinFDEK', fog_density=0.005, scatter_fraction=0.05, eval_k=1, eval_metric_th=10.0)
+    sim = FogScenePerceptionSimulator(nusc_scene,
+                                      pipeline,
+                                      eval_metric=sim_args['eval_metric'],
+                                      fog_density=sim_args['fog_density'],
+                                      scatter_fraction=sim_args['scatter_fraction'],
+                                      eval_k=sim_args['eval_k'],
+                                      eval_metric_th=sim_args['eval_metric_th'])
 
-    sim = FogScenePerceptionSimulator(nusc_scene, pipeline, eval_metric='MinFDEK', fog_density=0.005, scatter_fraction=0.05, eval_k=1, eval_metric_th=10.0)
     init_pred_tokens = list(sim.pred_candidate_info.keys())
     
-    print(len(init_pred_tokens))
+    #print(len(init_pred_tokens))
     #print(sim.init_preds)
-    print(len(sim.passing_pred_tokens))
+    # print(len(sim.passing_pred_tokens))
 
     ast_sim = PerceptionSimWrapper(sim)
 
 
 
     s0 = [0]
-    actions = [tuple([i]) for i in range(ast_sim.simulator.horizon)]
+    # actions = [tuple([i]) for i in range(ast_sim.simulator.horizon)]
+    # actions = [[7938],
+    #    [3190],
+    #    [5608],
+    #    [ 659],
+    #    [4168],
+    #    [1657],
+    #    [2424],
+    #    [2770]]
+
+    # actions = [[7938],
+    #         [3168],
+    #         [8969],
+    #         [3556],
+    #         [1942],
+    #         [6433],
+    #         [4906],
+    #         [9205],
+    #         [2237],
+    #         [5712],
+    #         [8742]]
+
+    # actions = [[9628],
+    #    [2175],
+    #    [3061],
+    #    [7308],
+    #    [6890],
+    #    [1106],
+    #    [6571],
+    #    [9259],
+    #    [7465],
+    #    [3814],
+    #    [4265],
+    #    [ 285],
+    #    [8836],
+    #    [4051],
+    #    [1596]]
+    actions = [[ 187],
+       [ 480],
+       [3466],
+       [7110],
+       [4683],
+       [1436],
+       [5485],
+       [6489],
+       [8821],
+       [3557],
+       [8754],
+       [ 760],
+       [  89],
+       [8274],
+       [5792],
+       [7399],
+       [8213],
+       [3954],
+       [7686]]
+
     #     actions = pickle.load(f)[0]
 
     print('Actions: {}'.format(actions))
 
-    # for i in range(6):
-
-    print('-----------------')
-    ast_sim.reset(s0)
-    for a in actions:
-        ast_sim.closed_loop_step(a)
-        reward_info = ast_sim.get_reward_info()
-        #print(ast_sim.is_terminal())
-        print(ast_sim.is_goal())
+    for i in range(1):
+        print('-----------------')
+        ast_sim.reset(s0)
+        for a in actions:
+            ast_sim.closed_loop_step(a)
+            reward_info = ast_sim.get_reward_info()
+            #print(ast_sim.is_terminal())
+            # print(ast_sim.is_goal())
+            ax = ast_sim.simulator._render_detection()
+            ast_sim.simulator._render_prediction()
+            #plt.sca(ax)
+            #plt.show(block=False)
 
     print(ast_sim.simulator.cnt)
 

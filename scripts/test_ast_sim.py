@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
 
     def build_simulator(pipeline_config, perception_args, sim_args):
-            # Create NuScenes
+        # Create NuScenes
         # pipeline_config = perception_args['pipeline_config']
         nuscenes = NuScenes(version=pipeline_config['NUSCENES_VERSION'],
                             dataroot=pipeline_config['NUSCENES_DATAROOT'],
