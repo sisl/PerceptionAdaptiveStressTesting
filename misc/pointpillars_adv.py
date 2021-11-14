@@ -185,6 +185,17 @@ def main():
 
     # Need to reduce to points near target
 
+    print(critical_set_array[:, :20])
+    print(data_dict['points'][:, :20])
+
+    print(critical_set_array[0, 0] in data_dict['points'])
+
+    for i in range(data_dict['points'].shape[0]):
+        row = data_dict['points'][i, :]
+        if critical_set_array[0, 0] in row:
+            print(row)
+            break
+
 
 
 
