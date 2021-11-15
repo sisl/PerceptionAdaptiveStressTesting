@@ -1,3 +1,4 @@
+import pickle
 import fire
 from garage.experiment.local_runner import LocalRunner
 import numpy as np
@@ -171,6 +172,29 @@ def runner(
 
         # Run the experiment
         runner.train(**runner_args)
+
+        # Try to load best actions
+        try:
+            with open(algo_args['log_dir'] + '/best_actions.p', 'rb') as f:
+                all_best_actions = pickle.load(f)
+
+            best_actions = all_best_actions[-1]
+            
+            # Create plot path
+            plot_path = algo_args['log_dir'] + '/plots/'
+            Path(plot_path).mkdir(parents=True, exist_ok=True)
+
+
+            sim.reset([0])
+            for action in best_actions:
+                sim.step(action)
+                sim.simulator._plot_detections(plot_path=plot_path)
+                
+        except:
+            pass
+
+
+
 
         # log_dir = run_experiment_args['log_dir']
         #garage.experiment.SnapshotConfig

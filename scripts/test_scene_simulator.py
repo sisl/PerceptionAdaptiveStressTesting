@@ -189,30 +189,54 @@ def main(pipeline_config):
     #    [8836],
     #    [4051],
     #    [1596]]
-    actions = [[ 187],
-       [ 480],
-       [3466],
-       [7110],
-       [4683],
-       [1436],
-       [5485],
-       [6489],
-       [8821],
-       [3557],
-       [8754],
-       [ 760],
-       [  89],
-       [8274],
-       [5792],
-       [7399],
-       [8213],
-       [3954],
-       [7686]]
+    # actions = [[ 187],
+    #    [ 480],
+    #    [3466],
+    #    [7110],
+    #    [4683],
+    #    [1436],
+    #    [5485],
+    #    [6489],
+    #    [8821],
+    #    [3557],
+    #    [8754],
+    #    [ 760],
+    #    [  89],
+    #    [8274],
+    #    [5792],
+    #    [7399],
+    #    [8213],
+    #    [3954],
+    #    [7686]]
+
+    actions  =[[ 572],
+       [7917],
+       [1665],
+       [4955],
+       [3535],
+       [4335],
+       [7606],
+       [2097],
+       [ 762],
+       [6636],
+       [3366],
+       [9912],
+       [ 276],
+       [6729],
+       [2827],
+       [3307],
+       [6170],
+       [8539],
+       [4307],
+       [ 483],
+       [7761],
+       [2975],
+       [9097]]
 
     #     actions = pickle.load(f)[0]
 
     print('Actions: {}'.format(actions))
-
+    render_path = '/mnt/hdd/ford_ws/output/ast/plots/test/'
     for i in range(1):
         print('-----------------')
         ast_sim.reset(s0)
@@ -221,8 +245,8 @@ def main(pipeline_config):
             reward_info = ast_sim.get_reward_info()
             #print(ast_sim.is_terminal())
             # print(ast_sim.is_goal())
-            ax = ast_sim.simulator._render_detection()
-            ast_sim.simulator._render_prediction()
+            ast_sim.simulator._render_detection(render_path)
+            ast_sim.simulator._render_prediction(render_path)
             #plt.sca(ax)
             #plt.show(block=False)
 

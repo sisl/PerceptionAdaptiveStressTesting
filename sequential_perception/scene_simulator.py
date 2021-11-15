@@ -530,7 +530,7 @@ class FogScenePerceptionSimulator:
         return new_points
 
 
-    def _render_detection(self):
+    def _render_detection(self, render_path):
         # from nuscenes.eval.detection.render import visualize_sample
         # from nuscenes.eval.common.loaders import load_gt
 
@@ -539,7 +539,10 @@ class FogScenePerceptionSimulator:
             return
 
         # render_path = '/scratch/hdelecki/ford/output/ast/pointdrop/plots/'
-        render_path = '/mnt/hdd/ford_ws/output/ast/plots/test/'
+        
+        #render_path = '/mnt/hdd/ford_ws/output/ast/plots/test/'
+        # render_path = plot_path
+
         det_boxes = self.detections[-1]
         sample_token = det_boxes.sample_tokens[0]
         sample_rec = self.nuscenes.get('sample', sample_token)
@@ -606,7 +609,7 @@ class FogScenePerceptionSimulator:
         return ax
 
 
-    def _render_prediction(self):
+    def _render_prediction(self, render_path):
         import matplotlib.cm
         from nuscenes.eval.prediction.metrics import stack_ground_truth, mean_distances
 
@@ -614,7 +617,7 @@ class FogScenePerceptionSimulator:
             return
 
         track_helper = TrackingResultsPredictHelper(self.nuscenes, self.tracks[-1]['results'])
-        agent_rasterizer = AgentBoxesFromTracking(track_helper, seconds_of_history=self.seconds_of_history)
+        agent_rasterizer = AgentBoxesFromTracking(track_helper, seconds_of_history=self.pipeline.predictor.seconds_of_history)
         map_rasterizer = StaticLayerFromTracking(track_helper)
         input_representation = InputRepresentation(map_rasterizer, agent_rasterizer, Rasterizer())
 
@@ -622,15 +625,43 @@ class FogScenePerceptionSimulator:
             prediction = self.predictions[-1][i]
             sample_token = prediction.sample
             inst_token = prediction.instance
-            input_image = self.pipeline.predictor.input_image
-            output_trajs = self.pipeline.predictor.output_trajs
-            output_probs = self.pipeline.predictor.output_probs
+
+            #input_image = input_representation.make_input_representation(inst_token, sample_token)
+
+            output_probs = prediction.probabilities
+
+            output_trajs_global = prediction.prediction
+
+            nearest_track = self.pipeline.predictor._find_nearest_track(track_helper, inst_token, sample_token)
+            if nearest_track == None:
+                continue
+            track_instance = nearest_track['tracking_id']
+
+            
+            input_image = input_representation.make_input_representation(track_instance, sample_token)
+    
+            # Convert output trajs global --> local
+            center_agent_annotation = track_helper.get_sample_annotation(track_instance, sample_token)
+            center_translation = center_agent_annotation['translation'][:2]
+            center_rotation = center_agent_annotation['rotation']
+            output_trajs = np.zeros(output_trajs_global.shape)
+            for i in range(output_trajs_global.shape[0]):
+                global_traj = output_trajs_global[i, :, :]
+                output_trajs[i, :, :] = convert_global_coords_to_local(global_traj, center_translation, center_rotation)
+
+
+            #input_image = self.pipeline.predictor.input_image
+            #output_trajs = self.pipeline.predictor.output_trajs
+            #output_probs = self.pipeline.predictor.output_probs
             # print(output_probs)
 
             #gt_future = self.sample_to_gt_pred[sample_token]
             pred_token = prediction.instance + '_' + prediction.sample
             gt_future = self.pred_candidate_info[pred_token]
-            predicted_track = self.pipeline.predictor.predicted_track
+            
+            
+            # predicted_track = self.pipeline.predictor.predicted_track
+            predicted_track = nearest_track
             gt_future_local = convert_global_coords_to_local(gt_future, predicted_track['translation'], predicted_track['rotation'])
 
             stacked_ground_truth = stack_ground_truth(gt_future_local, prediction.number_of_modes)
@@ -638,7 +669,7 @@ class FogScenePerceptionSimulator:
             final_dists = final_distances(np.array(output_trajs), stacked_ground_truth).flatten()
             dist_sorted_idxs = np.argsort(mean_dists)
 
-            render_path = '/mnt/hdd/ford_ws/output/ast/plots/test/'
+            # render_path = '/mnt/hdd/ford_ws/output/ast/plots/test/'
             savepath = render_path + str(self.step) + '_' + inst_token + '_' + sample_token
 
             #colors = ['tab1', 'tab2', 'tab3', 'tab4', 'tab5', 'tab6', 'tab7', 'tab8', 'tab9', 'tab10']
@@ -659,7 +690,7 @@ class FogScenePerceptionSimulator:
                 #plt.scatter(10.*traj[:, 0] + 250, -(10.*traj[:, 1]) + 400, color='green', s=10, alpha=output_probs[i])
                 #plt.scatter(10.*traj[:, 0] + 250, -(10.*traj[:, 1]) + 400, color=colors[i], s=10)
                 # label = 'p={:4.3f}'.format(output_probs[i])
-                label = 'p={:4.3f}, {}{}={:4.2f}'.format(output_probs[i], self.eval_metric[:-2], self.eval_k, eval_arr[i])
+                label = 'p={:4.3f}, {}{}={:4.2f}'.format(output_probs[i], self.eval_metric[3:-1], self.eval_k, eval_arr[i])
                 plt.plot(10.*traj[:, 0] + 250, -(10.*traj[:, 1]) + 400, color=cmap(i), marker='o', markersize=msize, label=label, zorder=10-i)
 
             # Plot top 5 closest predicted

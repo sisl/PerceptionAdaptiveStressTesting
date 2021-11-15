@@ -162,7 +162,7 @@ def run(args):
 
     # runner settings
     runner_args = {'n_epochs': 100,
-                   'batch_size': 100,
+                   'batch_size': 50,
                    'plot': False
                    }
 
