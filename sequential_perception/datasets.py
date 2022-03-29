@@ -50,15 +50,7 @@ class NuScenesScene:
         self.category = deepcopy(nusc.category)
         self.attribute = deepcopy(nusc.attribute)
         self.visibility = deepcopy(nusc.visibility)
-        #self.instance = self.__load_table__('instance')
         self.sensor = deepcopy(nusc.sensor)
-        #self.calibrated_sensor = nusc.calibrated_sensor
-        #self.ego_pose = self.__load_table__('ego_pose')
-        #self.log = self.__load_table__('log')
-        #self.scene = self.__load_table__('scene')
-        #self.sample = self.__load_table__('sample')
-        #self.sample_data = self.__load_table__('sample_data')
-        #self.sample_annotation = self.__load_table__('sample_annotation')
         self.map = deepcopy(nusc.map)
 
         # Get all sample tokens for the scene
@@ -69,14 +61,11 @@ class NuScenesScene:
             scene_sample_tokens.append(cur_sample_token)
             cur_sample_token = nusc.get('sample', cur_sample_token)['next']
 
-        #print(scene_sample_tokens)
-
         # make new scene table
         self.scene = [deepcopy(nusc.get('scene', scene_token))]
 
         # make new log table
         self.log = [deepcopy(nusc.get('log', self.scene[0]['log_token']))]
-
 
         sensor_keys = list(nusc.get('sample', first_sample_token)['data'].keys())
 
@@ -109,8 +98,6 @@ class NuScenesScene:
                     inst = deepcopy(nusc.get('instance', ann['instance_token']))
                     self.instance.append(inst)
 
-
-
             # For each sensor
             for sensor_key in sensor_keys:
                 sensor_data_token = sample['data'][sensor_key]
@@ -136,107 +123,7 @@ class NuScenesScene:
         self.colormap = get_colormap()
 
 
-        self.__make_reverse_index__(nusc.verbose)
-
-    # def __init__(self, dataroot:str, nusc:NuScenes, scene_token:str):
-    #     self.version = nusc.version
-    #     self.dataroot = dataroot
-    #     self.table_names = ['category', 'attribute', 'visibility', 'instance', 'sensor', 'calibrated_sensor',
-    #                         'ego_pose', 'log', 'scene', 'sample', 'sample_data', 'sample_annotation', 'map']
-
-
-    #     # Build new tables
-    #     self.category = nusc.category
-    #     self.attribute = nusc.attribute
-    #     self.visibility = nusc.visibility
-    #     #self.instance = self.__load_table__('instance')
-    #     self.sensor = nusc.sensor
-    #     #self.calibrated_sensor = nusc.calibrated_sensor
-    #     #self.ego_pose = self.__load_table__('ego_pose')
-    #     #self.log = self.__load_table__('log')
-    #     #self.scene = self.__load_table__('scene')
-    #     #self.sample = self.__load_table__('sample')
-    #     #self.sample_data = self.__load_table__('sample_data')
-    #     #self.sample_annotation = self.__load_table__('sample_annotation')
-    #     self.map = nusc.map
-
-    #     # Get all sample tokens for the scene
-    #     first_sample_token = nusc.get('scene', scene_token)['first_sample_token']
-    #     scene_sample_tokens = []
-    #     cur_sample_token = first_sample_token
-    #     while cur_sample_token != '':
-    #         scene_sample_tokens.append(cur_sample_token)
-    #         cur_sample_token = nusc.get('sample', cur_sample_token)['next']
-
-    #     #print(scene_sample_tokens)
-
-    #     # make new scene table
-    #     self.scene = [nusc.get('scene', scene_token)]
-
-    #     # make new log table
-    #     self.log = [nusc.get('log', self.scene[0]['log_token'])]
-
-
-    #     sensor_keys = list(nusc.get('sample', first_sample_token)['data'].keys())
-
-    #     # make new everything else
-    #     self.ego_pose = []
-    #     self.calibrated_sensor =[]
-    #     self.sample = []
-    #     self.instance = []
-    #     self.sample_data = []
-    #     self.sample_annotation = []
-
-    #     instance_tokens = []
-    #     ego_tokens = []
-    #     cal_sensor_tokens = []
-
-    #     for sample_token in scene_sample_tokens:
-
-    #         sample = nusc.get('sample', sample_token) # gets a list of annotation tokens AND data tokens
-            
-    #         self.sample.append(sample)
-
-    #         ann_tokens = sample['anns']
-
-    #         for ann_token in ann_tokens:
-    #             ann = nusc.get('sample_annotation', ann_token)
-    #             self.sample_annotation.append(ann)
-
-    #             if ann['instance_token'] not in instance_tokens:
-    #                 instance_tokens.append(ann['instance_token'])
-    #                 inst = nusc.get('instance', ann['instance_token'])
-    #                 self.instance.append(inst)
-
-
-
-    #         # For each sensor
-    #         for sensor_key in sensor_keys:
-    #             sensor_data_token = sample['data'][sensor_key]
-
-    #             # add sensor_data record
-    #             data_record = nusc.get('sample_data', sensor_data_token)
-    #             self.sample_data.append(data_record)
-
-    #             # sample_data_record points to ego_pose and calibrated_sensor
-    #             # ego_pose
-    #             if data_record['ego_pose_token'] not in ego_tokens:
-    #                 ego_tokens.append(data_record['ego_pose_token'])
-    #                 pose_record = nusc.get('ego_pose', data_record['ego_pose_token'])
-    #                 self.ego_pose.append(pose_record)
-
-    #             # calibrated_sensor
-    #             if data_record['calibrated_sensor_token'] not in cal_sensor_tokens:
-    #                 cal_sensor_tokens.append(data_record['calibrated_sensor_token'])
-    #                 cal_sensor_record = nusc.get('calibrated_sensor', data_record['calibrated_sensor_token'])
-    #                 self.calibrated_sensor.append(cal_sensor_record)
-
-
-    #     self.colormap = get_colormap()
-
-
-    #     self.__make_reverse_index__(nusc.verbose)
-            
+        self.__make_reverse_index__(nusc.verbose)  
 
     def __make_reverse_index__(self, verbose: bool) -> None:
         """
@@ -519,18 +406,11 @@ class PCDetSceneData(NuScenesDataset):
     """Class for PCDet data preprocessing of a single scene"""
 
     def __init__(self, sample_tokens, dataset_cfg, class_names, training=True, root_path=None, logger=None):
-        # root_path = (root_path if root_path is not None else Path(dataset_cfg.DATA_PATH)) / dataset_cfg.VERSION
         super().__init__(
             dataset_cfg=dataset_cfg, class_names=class_names, training=training, root_path=root_path, logger=logger
         )
-        # self.infos = []
-        # self.include_nuscenes_data(self.mode)
-        # if self.training and self.dataset_cfg.get('BALANCED_RESAMPLING', False):
-        #     self.infos = self.balanced_infos_resampling(self.infos)
         scene_infos = []
-        # print(self.infos)
         for info in self.infos:
-            #print(info['token'])
             if info['token'] in sample_tokens:
                 scene_infos.append(info)
         

@@ -1,7 +1,7 @@
 PROJECT_ROOT: /mnt/hdd/hdelecki/ford_ws/src/SequentialPerceptionPipeline/
-NUSCENES_DATAROOT: /mnt/hdd/data/sets/nuscenes/v1.0-mini
+NUSCENES_DATAROOT: /mnt/hdd/data/sets/nuscenes/v1.0-trainval
 NUSCENES_VERSION: v1.0-mini # v1.0-mini or v1.0-trainval
-NUSCENES_SPLIT: mini_val # train or val
+NUSCENES_SPLIT: val # train or val
 
 # Detection
 MODEL_CONFIG: /mnt/hdd/hdelecki/ford_ws/src/SequentialPerceptionPipeline/configs/detection/cbgs_pp_multihead.yaml

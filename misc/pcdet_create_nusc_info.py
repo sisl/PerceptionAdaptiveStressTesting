@@ -1,8 +1,9 @@
 import copy
 import pickle
 from pathlib import Path
-
 import numpy as np
+from nuscenes.nuscenes import NuScenes
+from nuscenes.utils import splits
 from pcdet.datasets.nuscenes.nuscenes_dataset import NuScenesDataset
 from pcdet.datasets.nuscenes import nuscenes_utils
 from pcdet.utils import common_utils
@@ -10,9 +11,6 @@ from tqdm import tqdm
 
 
 def create_nuscenes_info(version, data_path, save_path, max_sweeps=10):
-    from nuscenes.nuscenes import NuScenes
-    from nuscenes.utils import splits
-    #from . import nuscenes_utils
     data_path = data_path / version
     save_path = save_path / version
 
@@ -70,8 +68,6 @@ if __name__ == '__main__':
 
     if args.func == 'create_nuscenes_infos':
         dataset_cfg = EasyDict(yaml.load(open(args.cfg_file)))
-        #ROOT_DIR = (Path(__file__).resolve().parent / '../../../').resolve()
-        #ROOT_DIR = Path('/scratch/hdelecki/ford/data/sets/nuscenes')
         ROOT_DIR = Path('/mnt/hdd/data/sets/nuscenes')
         dataset_cfg.VERSION = args.version
         create_nuscenes_info(

@@ -4,12 +4,8 @@ from runner_mcts_point_drop import runner as mcts_runner
 
 
 if __name__ == '__main__':
-    # metrics = ['MinADEK']*3 + ['MinFDEK']*3
-    # ks = [10, 5, 1, 10, 5, 1]
-    # thresholds = [4, 6, 8, 10, 15, 20]
     metrics = ['MinFDEK']*7
     ks = [5]*7
-    #ks = [1]*4
     thresholds = [10, 12, 14, 16, 18, 20, 22]
     drop_likelihood = 0.1
 

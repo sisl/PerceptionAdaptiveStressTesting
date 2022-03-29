@@ -1,12 +1,7 @@
 import fire
 import numpy as np
 import torch
-# Useful imports
-# from example_save_trials import *
 import tensorflow as tf
-# Import the necessary garage classes
-# from garage.baselines.linear_feature_baseline import LinearFeatureBaseline
-# from garage.misc import logger
 from garage.experiment import run_experiment
 from garage.tf.experiment import LocalTFRunner
 
@@ -14,13 +9,12 @@ import ast_toolbox.mcts.BoundedPriorityQueues as BPQ
 from ast_toolbox.algos import MCTS
 from ast_toolbox.algos import MCTSBV
 from ast_toolbox.algos import MCTSRS
+
 # Import the AST classes
 from ast_toolbox.envs import ASTEnv
-#from ast_toolbox.rewards import ExampleAVReward
 from ast_toolbox.samplers import ASTVectorizedSampler
 from ast_toolbox.samplers import BatchSampler
-#from ast_toolbox.simulators import ExampleAVSimulator
-#from ast_toolbox.spaces import ExampleAVSpaces
+
 
 from nuscenes.nuscenes import NuScenes
 from sequential_perception.classical_pipeline import build_pipeline
@@ -128,7 +122,7 @@ def runner(
 
                     # Instantiate AST classes
                     sim = build_simulator(perception_args, sim_args)
-                    reward_function = PerceptionASTReward(**reward_args)
+                    reward_function = PerceptionASTReward(**reward_args, expect_log=False)
                     spaces = PerceptionASTSpaces(**spaces_args)
 
                     # Create the environment
@@ -177,14 +171,6 @@ def runner(
                     local_runner.train(**runner_args)
 
                     log_dir = run_experiment_args['log_dir']
-
-                    # if save_expert_trajectory:
-                    #     load_convert_and_save_mcts_expert_trajectory(
-                    #         best_actions_filename=log_dir + '/best_actions.p',
-                    #         expert_trajectory_filename=log_dir + '/expert_trajectory.p',
-                    #         sim=sim,
-                    #         s_0=env_args['s_0'],
-                    #         reward_function=reward_function)
 
     run_experiment(
         run_task,

@@ -1,13 +1,15 @@
 import pickle
+from multiprocessing import Pool
 import yaml
 from runner_mcts_point_drop import runner as mcts_runner
 
 
-if __name__ == '__main__':
+
+def run(pipeline_args):
     # Overall settings
     max_path_length = 7
     s_0 = [0]
-    base_log_dir = './fde515_toy_02'
+    base_log_dir = './fde10_motion'
     # experiment settings
     run_experiment_args = {'snapshot_mode': 'last',
                            'snapshot_gap': 1,
@@ -32,34 +34,11 @@ if __name__ == '__main__':
                 's_0': s_0,
                 }
 
-    # simulation settings
-    pipeline_config_path = '/mnt/hdd/hdelecki/ford_ws/src/SequentialPerceptionPipeline/configs/pipeline_config.yaml'
-    with open(pipeline_config_path, 'r') as f:
-        pipeline_config = yaml.load(f, yaml.SafeLoader)
-
     sim_args = {'blackbox_sim_state': True,
                 'open_loop': False,
                 'fixed_initial_state': True,
                 'max_path_length': max_path_length,
                 }
-
-    scene_token = 'fcbccedd61424f1b85dcbf8f897f9754'
-    target_instance = '045cd82a77a1472499e8c15100cb5ff3'
-    metric = 'MinFDEK'
-    k = 5
-    threshold = 15
-    drop_likelihood = 0.2
-    max_range = 35
-    pipeline_args = {'pipeline_config': pipeline_config,
-                     'scene_token': scene_token,
-                     'target_instance': target_instance,
-                     'drop_likelihood': drop_likelihood,
-                     'eval_metric': metric,
-                     'eval_k': k,
-                     'eval_metric_th': threshold,
-                     'no_pred_failure': True,
-                     'max_range': max_range
-                    }
 
     # reward settings
     reward_args = {'use_heuristic': False}
@@ -75,7 +54,7 @@ if __name__ == '__main__':
     mcts_algo_args = {'max_path_length': max_path_length,
                         'stress_test_mode': 2,
                         'ec': 100.0,
-                        'n_itr': 100,
+                        'n_itr': 50,
                         'k': 0.5,
                         'alpha': 0.5,
                         'clear_nodes': True,
@@ -109,4 +88,37 @@ if __name__ == '__main__':
         sampler_args=mcts_sampler_args,
         save_expert_trajectory=True,
     )
+
+if __name__ == '__main__':
+
+
+
+    pipeline_config_path = '/mnt/hdd/hdelecki/ford_ws/src/SequentialPerceptionPipeline/configs/pipeline_config.yaml'
+    with open(pipeline_config_path, 'r') as f:
+        pipeline_config = yaml.load(f, yaml.SafeLoader)
+
+
+    scene_token = 'fcbccedd61424f1b85dcbf8f897f9754'
+    target_instance = '045cd82a77a1472499e8c15100cb5ff3'
+    metric = 'MinFDEK'
+    k = 1
+    threshold = 20
+    drop_likelihood = 0.1
+    max_range = 35
+    pipeline_args = {'pipeline_config': pipeline_config,
+                     'scene_token': scene_token,
+                     'target_instance': target_instance,
+                     'drop_likelihood': drop_likelihood,
+                     'eval_metric': metric,
+                     'eval_k': k,
+                     'eval_metric_th': threshold,
+                     'no_pred_failure': False,
+                     'max_range': max_range
+                    }
+
+    pipelines = 4*[pipeline_args]
+
+    pool = Pool(8)
+    pool.map(run, pipelines) 
+
 

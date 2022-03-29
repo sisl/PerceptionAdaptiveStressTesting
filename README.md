@@ -1,6 +1,20 @@
-# SequentialPerceptionPipeline
+# PerceptionAdaptiveStressTesting
 
-## Setup
+Adaptive Stress Testing (AST) of Lidar-based perception systems for autonomous vehicles under adverse weather conditions. We formulate Perception Adaptive Stress Testing (PAST) and validate a sample Lidar-based perception system over the NuScenes driving dataset.
+
+
+![](./media/past_block.png)
+
+**Approach:** Our proposed PAST framework for validation of tracking and prediction stages of an AV perception systems under adverse weather conditions is illustrated above. Red points indicate disturbances to the perception system caused by LiDAR beams reflecting off of airborne particles. Monte Carlo Tree Search (MCTS) controls how sequences of disturbances are added to the system to cause failures in perception tasks that depend on detections aggregated over time, such as object tracking and trajectory prediction. PAST seeks to find the most likely failures in these sequential perception system tasks.
+
+
+
+![](./media/2022_IROS_video_Delecki_Gif2.gif)
+
+**Results** The above animation shows a particular failure event found using our proposed approach. Objecy detections and the top 5 most confident predicted trajectories are shown in blue while ground truth is shown in black. Red points in the lidar point cloud represent the most likely adverse weather disturbance introduced by our method. The failure occurs in the vehicle highlighted in red. The legend to the right shows the final displacement error of each prediction. The ego vehicle is highlighted in green. PAST finds a sequence of disturbances leading to failure. The predicted trajectory incorrectly indicates that the ego vehicle will be cut off in the next six seconds. Such incorrect predictions could cause unsafe behaviors in the ego vehicle, and can even result in accidents. Since our method can detect such possible failures, it can inform future development of robust perception systems for autonomous vehicles.
+
+
+<!-- ## Setup
 This project requires python 3.6 and pytorch 1.3. In a new `conda` environment, you can install these with:
 
 ```conda install python=3.6 pytorch=1.3 cudatoolkit=10.0 cudnn boost mayavi importlib_metadata importlib_resources```
@@ -29,7 +43,7 @@ Now follow the installation instructions for: https://github.com/open-mmlab/Open
 
 and download the PV-RCNN_8369.pth pre-trained model located: https://drive.google.com/file/d/1lIOq4Hxr0W3qsX83ilQv0nk1Cls6KAr-/view
 
-Make a directory within OpenPCDet and save the model to "OpenPCDet/Models/pv_rcnn8369.pth"
+Make a directory within OpenPCDet and save the model to "OpenPCDet/Models/pv_rcnn8369.pth" -->
 
 <!-- Now everything should be ready to run. Run the following
 python ObjectDetect.py --data_path PATH/TO/KITTI/DATA/velodyne_points/data/ -->
