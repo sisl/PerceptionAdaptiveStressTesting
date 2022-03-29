@@ -1,4 +1,4 @@
-# Perception Adaptive Stress Testing
+# Perception Adaptive Stress Testing [PDF](https://arxiv.org/pdf/2203.14155.pdf)
 
 Adaptive Stress Testing (AST) of Lidar-based perception systems for autonomous vehicles under adverse weather conditions. We formulate Perception Adaptive Stress Testing (PAST) and validate a sample Lidar-based perception system over the NuScenes driving dataset.
 
@@ -57,3 +57,13 @@ The link above is to a tutorial on how to predict trajectories. Covernet expects
 that data so we have elected to create an empy map representation which will eliminate the map on nuscenes data.
 
 For the agent state vector that information can be pulled from the oxts/ files in the ego vehicle. -->
+
+```
+@article{delecki2022,
+  title={How Do We Fail? Stress Testing Perception in Autonomous Vehicles},
+  author={Delecki, Harrison and Itkina, Masha and Lange, Bernard, Senanayake, Ransalu and Kochenderfer, Mykel J.},
+  journal={arXiv e-prints},
+  pages={arXiv--2203},
+  year={2022}
+}
+```
