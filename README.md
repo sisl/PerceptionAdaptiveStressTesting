@@ -1,4 +1,4 @@
-# PerceptionAdaptiveStressTesting
+# Perception Adaptive Stress Testing
 
 Adaptive Stress Testing (AST) of Lidar-based perception systems for autonomous vehicles under adverse weather conditions. We formulate Perception Adaptive Stress Testing (PAST) and validate a sample Lidar-based perception system over the NuScenes driving dataset.
 
